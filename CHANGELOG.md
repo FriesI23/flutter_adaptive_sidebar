@@ -1,3 +1,4 @@
 ## 0.0.1
 
-* TODO: Describe initial release.
+* Add Material and Cupertino sidebars.
+* Share selection, expansion, and manual width through `AdaptiveNavigationController`.

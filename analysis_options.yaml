@@ -2,3 +2,37 @@ include: package:flutter_lints/flutter.yaml
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+
+  errors:
+    missing_return: error
+    dead_code: error
+    unused_import: error
+    unused_local_variable: error
+
+linter:
+  rules:
+    prefer_relative_imports: true
+    prefer_final_fields: true
+    prefer_final_locals: true
+    prefer_void_to_null: true
+    test_types_in_equals: true
+    always_declare_return_types: true
+    avoid_types_on_closure_parameters: true
+    combinators_ordering: true
+    directives_ordering: true
+    eol_at_end_of_file: true
+    missing_whitespace_between_adjacent_strings: true
+    public_member_api_docs: true
+    unnecessary_lambdas: true
+    use_enums: true
+    use_string_buffers: true
+    use_to_and_as_if_applicable: true
+    prefer_const_constructors: true
+    prefer_const_constructors_in_immutables: true
+    prefer_const_declarations: true

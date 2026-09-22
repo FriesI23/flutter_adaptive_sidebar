@@ -1,39 +1,39 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# flutter_adaptive_sidebar
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+Material and Cupertino sidebars that share one controller.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
-
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
-
-## Features
-
-TODO: List what your package can do. Maybe include images, gifs, or videos.
-
-## Getting started
-
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+The package draws the sidebar. The caller decides when to show it, including how window size maps to a sidebar or to content alone.
 
 ```dart
-const like = 'sample';
+final Widget page = useMaterial
+    ? Row(
+        children: [
+          MaterialSidebar(
+            controller: controller,
+            content: MaterialSidebarNavigation(
+              destinations: destinations,
+              selectedIndex: controller.selectedIndex,
+              onDestinationSelected: controller.select,
+            ),
+          ),
+          Expanded(child: body),
+        ],
+      )
+    : CupertinoSidebar(
+        controller: controller,
+        content: CupertinoSidebarNavigation(
+          destinations: destinations,
+          selectedIndex: controller.selectedIndex,
+          onDestinationSelected: controller.select,
+        ),
+        child: body,
+      );
 ```
 
-## Additional information
+`content` can be any widget. `MaterialSidebarNavigation` and `CupertinoSidebarNavigation` are the destination lists, including destinations pinned at the bottom. `MaterialWideNavigationRailButton` and `CupertinoSidebarDestination` are the rows those lists use.
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+`AdaptiveNavigationController` keeps the selected destination, sidebar expansion, and manual width when the style changes. Both sidebars accept `tooltipBuilder`; only Material supplies a tooltip when it is omitted.
+
+Wrap the tree in `IosNavigationObstruction` to clear iPadOS window controls, or provide your own `NavigationObstructionScope`.
+
+See `example/` for a runnable app with a Material / Cupertino switch. Large and landscape windows place the sidebar beside the content. Compact portrait shows the content alone.

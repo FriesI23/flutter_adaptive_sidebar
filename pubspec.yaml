@@ -1,15 +1,17 @@
 name: flutter_adaptive_sidebar
-description: "A new Flutter package project."
+description: "Material and Cupertino sidebars that share one controller."
 version: 0.0.1
 homepage:
 
 environment:
   sdk: ^3.12.2
-  flutter: ">=1.17.0"
+  flutter: ">=3.44.0"
 
 dependencies:
+  cupertino_icons: ^1.0.8
   flutter:
     sdk: flutter
+  ios_window_control_layout: ^0.5.0
 
 dev_dependencies:
   flutter_test:
