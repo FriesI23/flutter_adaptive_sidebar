@@ -5,6 +5,13 @@ import 'package:flutter/material.dart';
 import '../adaptive_navigation_destination.dart';
 
 /// A Material 3 wide-navigation-rail destination button.
+///
+/// ```text
+/// collapsed      expanded
+/// +----+         +--------------+
+/// | o  |         | o   Label    |
+/// +----+         +--------------+
+/// ```
 class MaterialWideNavigationRailButton extends StatelessWidget {
   /// Creates a rail destination button that follows [animation].
   const MaterialWideNavigationRailButton({

@@ -3,6 +3,11 @@ import 'package:flutter/cupertino.dart';
 import '../adaptive_navigation_destination.dart';
 
 /// A Cupertino sidebar row for one navigation destination.
+///
+/// ```text
+/// idle                 selected
+/// o  Label             [ o  Label ]
+/// ```
 class CupertinoSidebarDestination extends StatelessWidget {
   /// Creates a destination row.
   const CupertinoSidebarDestination({
@@ -48,7 +53,6 @@ class CupertinoSidebarDestination extends StatelessWidget {
       alignment: AlignmentDirectional.centerStart,
       color: selected ? primaryColor.withValues(alpha: 0.14) : null,
       foregroundColor: foregroundColor,
-      autofocus: selected,
       onPressed: onPressed,
       child: Row(children: [icon, const SizedBox(width: 12), label]),
     );

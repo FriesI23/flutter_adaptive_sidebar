@@ -21,6 +21,15 @@ class MaterialSidebarStyle {
 /// Expansion and width come from [controller]. [content] fills the rail
 /// below the expand control. Use `MaterialSidebarNavigation` for the default
 /// destination list.
+///
+/// ```text
+/// collapsed              expanded
+/// +----+                 +----------+
+/// | [=]|                 | [=]      |
+/// | o  |                 | o  Label |
+/// | o  |                 | o  Label |
+/// +----+                 +----------+
+/// ```
 class MaterialSidebar extends StatefulWidget {
   /// Creates a Material sidebar around [content].
   const MaterialSidebar({

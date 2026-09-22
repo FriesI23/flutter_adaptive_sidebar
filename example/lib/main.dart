@@ -1,6 +1,7 @@
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
 
@@ -11,7 +12,13 @@ void main() {
 /// Example host for the Material and Cupertino sidebars.
 class AdaptiveSidebarExampleApp extends StatefulWidget {
   /// Creates the example app.
-  const AdaptiveSidebarExampleApp({super.key});
+  ///
+  /// [cupertino] forces a sidebar style. When it is null, iOS and macOS use
+  /// the Cupertino sidebar and every other platform uses Material.
+  const AdaptiveSidebarExampleApp({super.key, this.cupertino});
+
+  /// Forces the Cupertino sidebar when true, and Material when false.
+  final bool? cupertino;
 
   @override
   State<AdaptiveSidebarExampleApp> createState() =>
@@ -46,6 +53,7 @@ class _AdaptiveSidebarExampleAppState extends State<AdaptiveSidebarExampleApp> {
       themeMode: _themeMode,
       home: IosNavigationObstruction(
         child: AdaptiveSidebarExample(
+          cupertino: widget.cupertino,
           themeMode: _themeMode,
           onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
         ),
@@ -58,14 +66,31 @@ enum _SidebarStyle { material, cupertino }
 
 enum _ExpansionMode { automatic, collapsed, expanded }
 
+enum _CollapsedBarTransition { drop, fade }
+
+enum _CollapsedBarSize { measured, current }
+
+_SidebarStyle _platformSidebarStyle() {
+  return switch (defaultTargetPlatform) {
+    TargetPlatform.iOS || TargetPlatform.macOS => _SidebarStyle.cupertino,
+    _ => _SidebarStyle.material,
+  };
+}
+
 /// Demonstrates style switching and size-based sidebar placement.
 class AdaptiveSidebarExample extends StatefulWidget {
   /// Creates the example page.
   const AdaptiveSidebarExample({
     super.key,
+    required this.cupertino,
     required this.themeMode,
     required this.onThemeModeChanged,
   });
+
+  /// Forces the Cupertino sidebar when true, and Material when false.
+  ///
+  /// Null follows the host platform.
+  final bool? cupertino;
 
   /// Active light, dark, or system appearance.
   final ThemeMode themeMode;
@@ -115,7 +140,11 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
   final AdaptiveNavigationController _controller =
       AdaptiveNavigationController();
   int? _selectedAuxiliaryIndex;
-  _SidebarStyle _style = _SidebarStyle.material;
+  late _SidebarStyle _style;
+  _CollapsedBarTransition _collapsedBarTransition =
+      _CollapsedBarTransition.drop;
+  _CollapsedBarSize _collapsedBarSize = _CollapsedBarSize.measured;
+  bool _collapsedBarSeparator = false;
   _ExpansionMode _mode = _ExpansionMode.automatic;
   bool _autoPaused = false;
   bool _applyingExpansion = false;
@@ -135,6 +164,11 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
   @override
   void initState() {
     super.initState();
+    _style = switch (widget.cupertino) {
+      true => _SidebarStyle.cupertino,
+      false => _SidebarStyle.material,
+      null => _platformSidebarStyle(),
+    };
     _controller.addListener(_onControllerChanged);
   }
 
@@ -257,6 +291,7 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
   }
 
   void _toggleStyle() {
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _style = _style == _SidebarStyle.material
           ? _SidebarStyle.cupertino
@@ -373,6 +408,15 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
       onCustomTooltipChanged: (value) => setState(() => _customTooltip = value),
       onCustomLabelsChanged: (value) => setState(() => _customLabels = value),
       onCustomContentChanged: (value) => setState(() => _customContent = value),
+      collapsedBarTransition: _collapsedBarTransition,
+      onCollapsedBarTransitionChanged: (value) =>
+          setState(() => _collapsedBarTransition = value),
+      collapsedBarSize: _collapsedBarSize,
+      onCollapsedBarSizeChanged: (value) =>
+          setState(() => _collapsedBarSize = value),
+      collapsedBarSeparator: _collapsedBarSeparator,
+      onCollapsedBarSeparatorChanged: (value) =>
+          setState(() => _collapsedBarSeparator = value),
     );
     final Widget page;
     if (_style == _SidebarStyle.material) {
@@ -392,9 +436,42 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
         ],
       );
     } else {
+      final collapsedBarHeight = switch (_collapsedBarSize) {
+        _CollapsedBarSize.measured =>
+          kCupertinoSidebarCollapsedBarMeasuredHeight,
+        _CollapsedBarSize.current => SidebarLeadingScope.buttonExtent,
+      };
+      final collapsedBarMinimumDestinationExtent = switch (_collapsedBarSize) {
+        _CollapsedBarSize.measured =>
+          kCupertinoSidebarCollapsedBarMeasuredWidth,
+        _CollapsedBarSize.current =>
+          kCupertinoSidebarCollapsedBarMinimumDestinationExtent,
+      };
+      final showingPrimary =
+          _selectedAuxiliaryIndex == null && _customPageTitle == null;
       page = CupertinoSidebar(
         controller: _controller,
         content: _sidebarContent(),
+        collapsedBarHeight: collapsedBarHeight,
+        collapsedBarMinimumDestinationExtent:
+            collapsedBarMinimumDestinationExtent,
+        collapsedBarSeparator: _collapsedBarSeparator,
+        collapsedBar: _customContent
+            ? null
+            : CupertinoSidebarCollapsedBar(
+                destinations: _destinations,
+                selectedIndex: showingPrimary
+                    ? _controller.selectedIndex
+                    : null,
+                height: collapsedBarHeight,
+                onDestinationSelected: _selectPrimary,
+              ),
+        collapsedBarTransitionBuilder: switch (_collapsedBarTransition) {
+          _CollapsedBarTransition.drop =>
+            CupertinoSidebarCollapsedBarTransition.drop,
+          _CollapsedBarTransition.fade =>
+            CupertinoSidebarCollapsedBarTransition.fade,
+        },
         extent: _extent,
         dragHandleBuilder: _dragHandleBuilder,
         tooltipBuilder: _tooltipBuilder,
@@ -456,6 +533,12 @@ class _ExampleBody extends StatelessWidget {
     required this.onCustomTooltipChanged,
     required this.onCustomLabelsChanged,
     required this.onCustomContentChanged,
+    required this.collapsedBarTransition,
+    required this.onCollapsedBarTransitionChanged,
+    required this.collapsedBarSize,
+    required this.onCollapsedBarSizeChanged,
+    required this.collapsedBarSeparator,
+    required this.onCollapsedBarSeparatorChanged,
   });
 
   final _SidebarStyle style;
@@ -480,38 +563,15 @@ class _ExampleBody extends StatelessWidget {
   final ValueChanged<bool> onCustomTooltipChanged;
   final ValueChanged<bool> onCustomLabelsChanged;
   final ValueChanged<bool> onCustomContentChanged;
+  final _CollapsedBarTransition collapsedBarTransition;
+  final ValueChanged<_CollapsedBarTransition> onCollapsedBarTransitionChanged;
+  final _CollapsedBarSize collapsedBarSize;
+  final ValueChanged<_CollapsedBarSize> onCollapsedBarSizeChanged;
+  final bool collapsedBarSeparator;
+  final ValueChanged<bool> onCollapsedBarSeparatorChanged;
 
   @override
   Widget build(BuildContext context) {
-    final customPageTitle = this.customPageTitle;
-    final Widget page;
-    if (settingsSelected) {
-      page = _SettingsPage(
-        style: style,
-        settings: settings,
-        onPreferredWidthChanged: onPreferredWidthChanged,
-        onMinimumWidthChanged: onMinimumWidthChanged,
-        onMaximumWidthChanged: onMaximumWidthChanged,
-        onCollapsedExtentChanged: onCollapsedExtentChanged,
-        onAutomaticExpandedWidthChanged: onAutomaticExpandedWidthChanged,
-        onCustomDragHandleChanged: onCustomDragHandleChanged,
-        onCustomTooltipChanged: onCustomTooltipChanged,
-        onCustomLabelsChanged: onCustomLabelsChanged,
-        onCustomContentChanged: onCustomContentChanged,
-      );
-    } else if (customPageTitle != null) {
-      page = Center(child: Text(customPageTitle));
-    } else {
-      page = switch (selectedIndex) {
-        0 => _HomeList(style: style, itemCount: itemCount),
-        _ => const Center(child: Text('Search')),
-      };
-    }
-    final controls = _ExpansionControls(
-      style: style,
-      mode: mode,
-      onChanged: onModeChanged,
-    );
     final appearance = _AppearanceButton(
       style: style,
       themeMode: themeMode,
@@ -522,6 +582,7 @@ class _ExampleBody extends StatelessWidget {
       direction: textDirection,
       onPressed: onToggleDirection,
     );
+    final pageSlivers = _pageSlivers();
     if (style == _SidebarStyle.cupertino) {
       final reserved =
           SidebarLeadingScope.maybeOf(context)?.reservedExtent ?? 0;
@@ -529,54 +590,109 @@ class _ExampleBody extends StatelessWidget {
       return DefaultTextStyle(
         style: cupertinoText,
         child: CupertinoPageScaffold(
-          navigationBar: CupertinoNavigationBar(
-            leading: reserved == 0 ? null : SizedBox(width: reserved),
-            middle: const Text('Adaptive sidebar'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                appearance,
-                direction,
-                CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: onToggleStyle,
-                  child: const Icon(CupertinoIcons.device_phone_portrait),
+          child: CustomScrollView(
+            slivers: [
+              CupertinoSliverNavigationBar(
+                // Fully clear page color, not a different tint. Automatic
+                // visibility keeps the bar opaque until content scrolls
+                // under it, which is when the blur becomes visible.
+                backgroundColor: CupertinoTheme.of(
+                  context,
+                ).scaffoldBackgroundColor.withValues(alpha: 0),
+                automaticBackgroundVisibility: true,
+                enableBackgroundFilterBlur: true,
+                border: null,
+                leading: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (reserved != 0) SizedBox(width: reserved),
+                    CupertinoButton(
+                      key: const ValueKey('style-button'),
+                      padding: EdgeInsets.zero,
+                      onPressed: onToggleStyle,
+                      child: const Icon(CupertinoIcons.device_phone_portrait),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                controls,
-                Expanded(child: page),
-              ],
-            ),
+                largeTitle: const Text('Adaptive sidebar'),
+                middle: const CupertinoSidebarMiddle(
+                  title: Text('Adaptive sidebar'),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [appearance, direction],
+                ),
+              ),
+              ...pageSlivers,
+            ],
           ),
         ),
       );
     }
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Adaptive sidebar'),
-        actions: [
-          appearance,
-          direction,
-          IconButton(
-            tooltip: 'Use Cupertino',
-            onPressed: onToggleStyle,
-            icon: const Icon(Icons.phone_iphone),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            leading: IconButton(
+              key: const ValueKey('style-button'),
+              tooltip: 'Use Cupertino',
+              onPressed: onToggleStyle,
+              icon: const Icon(Icons.phone_iphone),
+            ),
+            title: const Text('Adaptive sidebar'),
+            actions: [appearance, direction],
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          controls,
-          Expanded(child: page),
+          ...pageSlivers,
         ],
       ),
     );
+  }
+
+  List<Widget> _pageSlivers() {
+    if (settingsSelected) {
+      return [
+        _SettingsPage(
+          style: style,
+          settings: settings,
+          mode: mode,
+          onModeChanged: onModeChanged,
+          collapsedBarTransition: collapsedBarTransition,
+          onCollapsedBarTransitionChanged: onCollapsedBarTransitionChanged,
+          collapsedBarSize: collapsedBarSize,
+          onCollapsedBarSizeChanged: onCollapsedBarSizeChanged,
+          collapsedBarSeparator: collapsedBarSeparator,
+          onCollapsedBarSeparatorChanged: onCollapsedBarSeparatorChanged,
+          onPreferredWidthChanged: onPreferredWidthChanged,
+          onMinimumWidthChanged: onMinimumWidthChanged,
+          onMaximumWidthChanged: onMaximumWidthChanged,
+          onCollapsedExtentChanged: onCollapsedExtentChanged,
+          onAutomaticExpandedWidthChanged: onAutomaticExpandedWidthChanged,
+          onCustomDragHandleChanged: onCustomDragHandleChanged,
+          onCustomTooltipChanged: onCustomTooltipChanged,
+          onCustomLabelsChanged: onCustomLabelsChanged,
+          onCustomContentChanged: onCustomContentChanged,
+        ),
+      ];
+    }
+    final customPageTitle = this.customPageTitle;
+    if (customPageTitle != null) {
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(child: Text(customPageTitle)),
+        ),
+      ];
+    }
+    return [
+      switch (selectedIndex) {
+        0 => _HomeList(style: style, itemCount: itemCount),
+        _ => const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(child: Text('Search')),
+        ),
+      },
+    ];
   }
 }
 
@@ -668,6 +784,83 @@ class _DirectionButton extends StatelessWidget {
   }
 }
 
+class _TransitionControls extends StatelessWidget {
+  const _TransitionControls({
+    required this.transition,
+    required this.onChanged,
+  });
+
+  final _CollapsedBarTransition transition;
+  final ValueChanged<_CollapsedBarTransition> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Bar animation'),
+          const SizedBox(height: 8),
+          CupertinoSlidingSegmentedControl<_CollapsedBarTransition>(
+            groupValue: transition,
+            children: const {
+              _CollapsedBarTransition.drop: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Text('Drop'),
+              ),
+              _CollapsedBarTransition.fade: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Text('Fade'),
+              ),
+            },
+            onValueChanged: (value) {
+              if (value != null) onChanged(value);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BarSizeControls extends StatelessWidget {
+  const _BarSizeControls({required this.size, required this.onChanged});
+
+  final _CollapsedBarSize size;
+  final ValueChanged<_CollapsedBarSize> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Bar size'),
+          const SizedBox(height: 8),
+          CupertinoSlidingSegmentedControl<_CollapsedBarSize>(
+            groupValue: size,
+            children: const {
+              _CollapsedBarSize.measured: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Text('Measured'),
+              ),
+              _CollapsedBarSize.current: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Text('Current'),
+              ),
+            },
+            onValueChanged: (value) {
+              if (value != null) onChanged(value);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ExpansionControls extends StatelessWidget {
   const _ExpansionControls({
     required this.style,
@@ -686,35 +879,33 @@ class _ExpansionControls extends StatelessWidget {
       _ExpansionMode.collapsed: 'Coll',
       _ExpansionMode.expanded: 'Expand',
     };
-    if (style == _SidebarStyle.cupertino) {
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        child: CupertinoSlidingSegmentedControl<_ExpansionMode>(
-          groupValue: mode,
-          children: {
-            for (final entry in labels.entries)
-              entry.key: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(entry.value),
-              ),
-          },
-          onValueChanged: (value) {
-            if (value != null) onChanged(value);
-          },
-        ),
-      );
-    }
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: SegmentedButton<_ExpansionMode>(
-        segments: [
-          for (final entry in labels.entries)
-            ButtonSegment(value: entry.key, label: Text(entry.value)),
-        ],
-        selected: {mode},
-        onSelectionChanged: (selection) => onChanged(selection.first),
+    final control = style == _SidebarStyle.cupertino
+        ? CupertinoSlidingSegmentedControl<_ExpansionMode>(
+            groupValue: mode,
+            children: {
+              for (final entry in labels.entries)
+                entry.key: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(entry.value),
+                ),
+            },
+            onValueChanged: (value) {
+              if (value != null) onChanged(value);
+            },
+          )
+        : SegmentedButton<_ExpansionMode>(
+            segments: [
+              for (final entry in labels.entries)
+                ButtonSegment(value: entry.key, label: Text(entry.value)),
+            ],
+            selected: {mode},
+            onSelectionChanged: (selection) => onChanged(selection.first),
+          );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [const Text('Expansion'), const SizedBox(height: 8), control],
       ),
     );
   }
@@ -1166,6 +1357,14 @@ class _CollapsedSummary extends StatelessWidget {
   }
 }
 
+const List<Color> _homeItemColors = <Color>[
+  Color(0xFFFFE08A),
+  Color(0xFFB7E4C7),
+  Color(0xFFA9D6E5),
+  Color(0xFFF4C2C2),
+  Color(0xFFD4C4FB),
+];
+
 class _HomeList extends StatelessWidget {
   const _HomeList({required this.style, required this.itemCount});
 
@@ -1174,15 +1373,30 @@ class _HomeList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
+    return SliverList.builder(
       key: const ValueKey('home-list'),
       itemCount: itemCount,
       itemBuilder: (context, index) {
         final title = 'Item $index';
+        final detail =
+            'The quick brown fox jumps over the lazy dog. '
+            'This longer row is here so color and text can be seen sliding '
+            'under the bar.';
+        final color = index % 6 == 0
+            ? _homeItemColors[(index ~/ 6) % _homeItemColors.length]
+            : null;
         if (style == _SidebarStyle.cupertino) {
-          return CupertinoListTile(title: Text(title));
+          return CupertinoListTile(
+            backgroundColor: color,
+            title: Text(title),
+            subtitle: Text(detail),
+          );
         }
-        return ListTile(title: Text(title));
+        return ListTile(
+          tileColor: color,
+          title: Text(title),
+          subtitle: Text(detail),
+        );
       },
     );
   }
@@ -1192,6 +1406,14 @@ class _SettingsPage extends StatelessWidget {
   const _SettingsPage({
     required this.style,
     required this.settings,
+    required this.mode,
+    required this.onModeChanged,
+    required this.collapsedBarTransition,
+    required this.onCollapsedBarTransitionChanged,
+    required this.collapsedBarSize,
+    required this.onCollapsedBarSizeChanged,
+    required this.collapsedBarSeparator,
+    required this.onCollapsedBarSeparatorChanged,
     required this.onPreferredWidthChanged,
     required this.onMinimumWidthChanged,
     required this.onMaximumWidthChanged,
@@ -1205,6 +1427,14 @@ class _SettingsPage extends StatelessWidget {
 
   final _SidebarStyle style;
   final _SettingsValues settings;
+  final _ExpansionMode mode;
+  final ValueChanged<_ExpansionMode> onModeChanged;
+  final _CollapsedBarTransition collapsedBarTransition;
+  final ValueChanged<_CollapsedBarTransition> onCollapsedBarTransitionChanged;
+  final _CollapsedBarSize collapsedBarSize;
+  final ValueChanged<_CollapsedBarSize> onCollapsedBarSizeChanged;
+  final bool collapsedBarSeparator;
+  final ValueChanged<bool> onCollapsedBarSeparatorChanged;
   final ValueChanged<double> onPreferredWidthChanged;
   final ValueChanged<double> onMinimumWidthChanged;
   final ValueChanged<double> onMaximumWidthChanged;
@@ -1217,10 +1447,26 @@ class _SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return SliverList(
       key: const ValueKey('sidebar-settings'),
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
+      delegate: SliverChildListDelegate([
+        _ExpansionControls(style: style, mode: mode, onChanged: onModeChanged),
+        if (style == _SidebarStyle.cupertino) ...[
+          _TransitionControls(
+            transition: collapsedBarTransition,
+            onChanged: onCollapsedBarTransitionChanged,
+          ),
+          _BarSizeControls(
+            size: collapsedBarSize,
+            onChanged: onCollapsedBarSizeChanged,
+          ),
+          _SwitchControl(
+            style: style,
+            label: 'Bar separator',
+            value: collapsedBarSeparator,
+            onChanged: onCollapsedBarSeparatorChanged,
+          ),
+        ],
         _WidthControl(
           style: style,
           label: 'Preferred width',
@@ -1285,7 +1531,7 @@ class _SettingsPage extends StatelessWidget {
           value: settings.customContent,
           onChanged: onCustomContentChanged,
         ),
-      ],
+      ]),
     );
   }
 }

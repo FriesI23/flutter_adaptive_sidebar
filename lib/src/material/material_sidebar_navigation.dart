@@ -11,6 +11,16 @@ import 'material_wide_navigation_rail_button.dart';
 ///
 /// Place this in `MaterialSidebar.content`. A selected auxiliary destination
 /// clears the primary highlight.
+///
+/// ```text
+/// collapsed           expanded
+/// +----+              +------------+
+/// | o  |              | o  Home    |
+/// | o  |              | o  Search  |
+/// |    |              |            |
+/// | o  |              | o  Settings|
+/// +----+              +------------+
+/// ```
 class MaterialSidebarNavigation extends StatelessWidget {
   /// Creates a destination list for [destinations].
   const MaterialSidebarNavigation({

@@ -4,6 +4,11 @@ library;
 export 'src/adaptive_navigation_controller.dart';
 export 'src/adaptive_navigation_destination.dart';
 export 'src/cupertino/cupertino_sidebar.dart';
+export 'src/cupertino/cupertino_sidebar_collapsed_bar.dart'
+    show
+        CupertinoSidebarCollapsedBar,
+        kCupertinoSidebarCollapsedBarMeasuredHeight,
+        kCupertinoSidebarCollapsedBarMeasuredWidth;
 export 'src/cupertino/cupertino_sidebar_destination.dart';
 export 'src/cupertino/cupertino_sidebar_navigation.dart';
 export 'src/ios_navigation_obstruction.dart';

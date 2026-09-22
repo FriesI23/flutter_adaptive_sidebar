@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_adaptive_sidebar_example/main.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,8 +13,12 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const AdaptiveSidebarExampleApp());
+    await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: false));
     await tester.pumpAndSettle();
+
+    final styleButton = tester.getTopLeft(find.byTooltip('Use Cupertino'));
+    final title = tester.getTopLeft(find.text('Adaptive sidebar'));
+    expect(styleButton.dx, lessThan(title.dx));
 
     expect(find.text('Home'), findsWidgets);
     expect(find.byKey(const ValueKey('rail-panel')), findsOneWidget);
@@ -50,15 +55,15 @@ void main() {
     await tester.tap(find.byTooltip('Use Cupertino'));
     await tester.pumpAndSettle();
     expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<CupertinoButton>(),
+      isNull,
+    );
+    expect(
       find.byKey(const ValueKey('cupertino-sidebar-beside-host')),
       findsOneWidget,
     );
     expect(find.text('Search'), findsWidgets);
-    final segmentStyle = DefaultTextStyle.of(
-      tester.element(find.text('Auto')),
-    ).style;
-    expect(segmentStyle.decoration, TextDecoration.none);
-    expect(segmentStyle.fontFamily, 'CupertinoSystemText');
     final backdrop = tester.widget<ColoredBox>(
       find.byKey(const ValueKey('cupertino-sidebar-backdrop')),
     );
@@ -68,7 +73,17 @@ void main() {
       ).scaffoldBackgroundColor,
       backdrop.color,
     );
+    await tester.tap(
+      find.byKey(const ValueKey('cupertino-sidebar-auxiliary-destination-0')),
+    );
+    await tester.pumpAndSettle();
+    final segmentStyle = DefaultTextStyle.of(
+      tester.element(find.text('Auto')),
+    ).style;
+    expect(segmentStyle.decoration, TextDecoration.none);
+    expect(segmentStyle.fontFamily, 'CupertinoSystemText');
 
+    await tester.ensureVisible(find.text('Coll'));
     await tester.tap(find.text('Coll'));
     await tester.pumpAndSettle();
     expect(
@@ -78,6 +93,7 @@ void main() {
     expect(find.byKey(const ValueKey('cupertino-sidebar-panel')), findsNothing);
     expect(find.text('Search'), findsWidgets);
 
+    await tester.ensureVisible(find.text('Expand'));
     await tester.tap(find.text('Expand'));
     await tester.pumpAndSettle();
     expect(
@@ -92,7 +108,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const AdaptiveSidebarExampleApp());
+    await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: false));
     await tester.pumpAndSettle();
 
     final toggle = tester.getRect(
@@ -108,7 +124,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const AdaptiveSidebarExampleApp());
+    await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: false));
     await tester.pumpAndSettle();
 
     expect(find.text('Item 0'), findsOneWidget);
@@ -122,7 +138,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const AdaptiveSidebarExampleApp());
+    await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: false));
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byKey(const ValueKey('rail-panel'))).width,
@@ -137,6 +153,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.getSize(find.byKey(const ValueKey('rail-panel'))).width, 96);
 
+    await tester.tap(
+      find.byKey(const ValueKey('material-rail-auxiliary-destination-0')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Expand'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Auto'));
@@ -155,7 +175,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const AdaptiveSidebarExampleApp());
+    await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: false));
     await tester.pumpAndSettle();
 
     await tester.tap(
@@ -194,7 +214,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const AdaptiveSidebarExampleApp());
+    await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: false));
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byKey(const ValueKey('rail-panel'))).width,
@@ -221,7 +241,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const AdaptiveSidebarExampleApp());
+    await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: false));
     await tester.pumpAndSettle();
 
     await tester.tap(
@@ -243,12 +263,14 @@ void main() {
     expect(find.text('Today'), findsOneWidget);
     expect(find.text('3 due'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Coll'));
     await tester.tap(find.text('Coll'));
     await tester.pumpAndSettle();
     expect(find.text('Today'), findsNothing);
     expect(find.text('3 due'), findsNothing);
     expect(find.byKey(const ValueKey('custom-sidebar-lists')), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Expand'));
     await tester.tap(find.text('Expand'));
     await tester.pumpAndSettle();
     expect(find.text('Today'), findsOneWidget);
@@ -285,7 +307,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const AdaptiveSidebarExampleApp());
+    await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: false));
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byKey(const ValueKey('rail-panel'))).width,
@@ -320,6 +342,122 @@ void main() {
     expect(
       tester.getSize(find.byKey(const ValueKey('rail-panel'))).width,
       greaterThan(96),
+    );
+  });
+
+  testWidgets('cupertino app bar blurs once content scrolls under it', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: true));
+    await tester.pumpAndSettle();
+
+    final bar = find.byType(CupertinoSliverNavigationBar);
+    BackdropFilter barBlur() {
+      return tester.widget<BackdropFilter>(
+        find.descendant(of: bar, matching: find.byType(BackdropFilter)),
+      );
+    }
+
+    expect(barBlur().enabled, isFalse);
+
+    await tester.drag(find.text('Item 0'), const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    expect(barBlur().enabled, isTrue);
+    final navigationBar = tester.widget<CupertinoSliverNavigationBar>(bar);
+    final scaffoldColor = CupertinoTheme.of(
+      tester.element(bar),
+    ).scaffoldBackgroundColor;
+    final backgroundColor = navigationBar.backgroundColor!;
+    expect(backgroundColor.r, scaffoldColor.r);
+    expect(backgroundColor.g, scaffoldColor.g);
+    expect(backgroundColor.b, scaffoldColor.b);
+    expect(backgroundColor.a, 0);
+  });
+
+  testWidgets('apple platforms open the cupertino sidebar', (tester) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    try {
+      for (final platform in [TargetPlatform.iOS, TargetPlatform.macOS]) {
+        debugDefaultTargetPlatformOverride = platform;
+        await tester.pumpWidget(
+          AdaptiveSidebarExampleApp(key: ValueKey(platform)),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(
+            const ValueKey('cupertino-sidebar-auxiliary-destination-0'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('cupertino-sidebar-beside-host')),
+          findsOneWidget,
+        );
+        expect(find.text('Drop'), findsOneWidget);
+      }
+
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      await tester.pumpWidget(
+        const AdaptiveSidebarExampleApp(key: ValueKey('android')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('rail-panel')), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('collapsed bar clears its selection off the primary page', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: true));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('cupertino-sidebar-auxiliary-destination-0')),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Coll'));
+    await tester.tap(find.text('Coll'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getSize(
+        find.byKey(
+          const ValueKey('cupertino-sidebar-collapsed-selection-highlight'),
+        ),
+      ),
+      Size.zero,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('cupertino-sidebar-collapsed-destination-0')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Item 0'), findsOneWidget);
+    expect(
+      tester
+          .getSize(
+            find.byKey(
+              const ValueKey('cupertino-sidebar-collapsed-selection-highlight'),
+            ),
+          )
+          .isEmpty,
+      isFalse,
     );
   });
 }

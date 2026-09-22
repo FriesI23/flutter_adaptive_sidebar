@@ -31,6 +31,11 @@ void main() {
       tester.getSemantics(find.byType(CupertinoSidebarDestination)).label,
       'Home',
     );
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<CupertinoButton>(),
+      isNull,
+    );
     await tester.tap(find.byType(CupertinoButton));
     expect(presses, 1);
   });

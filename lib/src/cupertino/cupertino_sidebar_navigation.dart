@@ -8,6 +8,16 @@ import 'cupertino_sidebar_destination.dart';
 /// Place this in `CupertinoSidebar.content`. A selected auxiliary destination
 /// clears the primary highlight. The footer keeps a separator and bottom safe
 /// area.
+///
+/// ```text
+/// +------------------+
+/// | Home             |
+/// | Search           |
+/// |                  |
+/// +------------------+
+/// | Settings         |
+/// +------------------+
+/// ```
 class CupertinoSidebarNavigation extends StatelessWidget {
   /// Creates a destination list for [destinations].
   const CupertinoSidebarNavigation({

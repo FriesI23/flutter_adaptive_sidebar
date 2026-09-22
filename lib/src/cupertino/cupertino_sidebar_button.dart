@@ -12,6 +12,7 @@ class CupertinoSidebarButton extends StatelessWidget {
     required this.onPressed,
     required this.buttonKey,
     this.tooltipBuilder,
+    this.extent = kMinInteractiveDimensionCupertino,
   });
 
   /// Focus node owned by the sidebar host.
@@ -29,13 +30,16 @@ class CupertinoSidebarButton extends StatelessWidget {
   /// Optional tooltip wrapper. Cupertino does not supply a Material tooltip.
   final NavigationTooltipBuilder? tooltipBuilder;
 
+  /// Square size of the button. The collapsed capsule passes its height.
+  final double extent;
+
   @override
   Widget build(BuildContext context) {
     final direction = Directionality.of(context);
     final button = CupertinoButton(
       key: buttonKey,
       focusNode: focusNode,
-      minimumSize: const Size.square(44),
+      minimumSize: Size.square(extent),
       padding: EdgeInsets.zero,
       onPressed: onPressed,
       child: Semantics(
