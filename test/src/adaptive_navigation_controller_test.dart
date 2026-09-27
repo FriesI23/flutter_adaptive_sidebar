@@ -8,13 +8,13 @@ void main() {
     final controller = AdaptiveNavigationController();
     addTearDown(controller.dispose);
 
-    controller.select(2);
+    controller.select(const SidebarPrimarySelection(2));
     controller.expanded = false;
     controller.beginResize(extent, windowWidth: 1200);
     controller.updateResize(80, extent, windowWidth: 1200);
     controller.endResize();
 
-    expect(controller.selectedIndex, 2);
+    expect(controller.selection, const SidebarPrimarySelection(2));
     expect(controller.expanded, isFalse);
     expect(controller.manualWidth, 280);
     expect(controller.resizing, isFalse);
@@ -27,7 +27,7 @@ void main() {
 
   test('uses its initial values and ignores unchanged writes', () {
     final controller = AdaptiveNavigationController(
-      initialIndex: 1,
+      initialSelection: const SidebarPrimarySelection(1),
       initialExpanded: false,
       initialManualWidth: 240,
     );
@@ -35,11 +35,11 @@ void main() {
     var notifications = 0;
     controller.addListener(() => notifications++);
 
-    expect(controller.selectedIndex, 1);
+    expect(controller.selection, const SidebarPrimarySelection(1));
     expect(controller.expanded, isFalse);
     expect(controller.manualWidth, 240);
 
-    controller.select(1);
+    controller.select(const SidebarPrimarySelection(1));
     controller.expanded = false;
     controller.clearManualWidth();
     expect(notifications, 1);
@@ -47,10 +47,8 @@ void main() {
   });
 
   test('rejects a negative selection', () {
-    final controller = AdaptiveNavigationController();
-    addTearDown(controller.dispose);
-
-    expect(() => controller.selectedIndex = -1, throwsArgumentError);
+    expect(() => SidebarPrimarySelection(-1), throwsAssertionError);
+    expect(() => SidebarAuxiliarySelection(-1), throwsAssertionError);
   });
 
   test('toggleExpanded flips the presentation', () {

@@ -1,0 +1,38 @@
+name: Test CI
+
+on:
+  workflow_call:
+
+jobs:
+  flutter-test:
+    name: Flutter package and example
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.9
+          cache: true
+      - name: Create test results directory
+        run: mkdir -p test-results
+      - name: Run package tests
+        run: make test CI=1 MACHINE_OUT=test-results/package_test.log
+      - name: Run example tests
+        if: success() || failure()
+        run: >-
+          make test-example CI=1
+          MACHINE_OUT=${{ github.workspace }}/test-results/example_test.log
+      - name: Run quality and publishing gates
+        if: success() || failure()
+        run: |
+          make format-check
+          make analyze
+          make analyze-example
+          make publish-dry-run
+      - uses: actions/upload-artifact@v7
+        if: success() || failure()
+        with:
+          name: flutter-test-results
+          path: test-results/*_test.log
+          if-no-files-found: warn
+          retention-days: 7

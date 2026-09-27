@@ -1,11 +1,14 @@
 import 'package:flutter/widgets.dart';
 
-/// Physical insets that keep navigation chrome clear of system controls.
+/// Insets that keep navigation chrome clear of something covering the window.
 ///
-/// iPadOS window controls and corner-adapted safe areas are not read here.
-/// Place a [NavigationObstructionScope] above the navigation, or use
-/// `IosNavigationObstruction` to fill this value from
-/// `ios_window_control_layout`.
+/// Sidebars read this from [NavigationObstructionScope]. With no scope in the
+/// tree, both insets are zero and the chrome stays where the sidebar placed
+/// it. An app publishes its own insets; this package does not measure window
+/// controls.
+///
+/// [sidebar] shifts the sidebar. [toolbar] shifts the page toolbar while a
+/// Cupertino sidebar is collapsed.
 @immutable
 class NavigationObstruction {
   /// Creates obstruction insets.
@@ -14,10 +17,10 @@ class NavigationObstruction {
     this.toolbar = EdgeInsets.zero,
   });
 
-  /// Insets for sidebar chrome, in physical screen coordinates.
+  /// Insets for the sidebar, in screen coordinates.
   final EdgeInsets sidebar;
 
-  /// Insets for the page toolbar when it must clear window controls.
+  /// Insets for the page toolbar while a Cupertino sidebar is collapsed.
   final EdgeInsets toolbar;
 
   @override
@@ -30,7 +33,9 @@ class NavigationObstruction {
   int get hashCode => Object.hash(sidebar, toolbar);
 }
 
-/// Exposes [NavigationObstruction] to sidebar renderers.
+/// Publishes [obstruction] to sidebars below it.
+///
+/// Omit this widget when the navigation should not clear an obstruction.
 class NavigationObstructionScope extends InheritedWidget {
   /// Creates a scope for [obstruction].
   const NavigationObstructionScope({
@@ -42,7 +47,7 @@ class NavigationObstructionScope extends InheritedWidget {
   /// Insets consumed by navigation chrome in this subtree.
   final NavigationObstruction obstruction;
 
-  /// The obstruction from [context], or an empty value when no scope exists.
+  /// The obstruction from [context], or zero insets when no scope exists.
   static NavigationObstruction of(BuildContext context) =>
       context
           .dependOnInheritedWidgetOfExactType<NavigationObstructionScope>()

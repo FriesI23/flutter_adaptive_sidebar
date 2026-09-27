@@ -6,42 +6,40 @@
 ![Likes][pubdev-likes]
 ![Points][pubdev-points]
 
-EN / [中文](README_zh.md)
+[EN](README.md) / 中文
 
-Material and Cupertino sidebars driven by a shared controller.
+由同一个控制器驱动的 Material 与 Cupertino 侧边栏。
 
-The package handles sidebar presentation and state, while your app controls the
-responsive layout. You decide when to show the sidebar and when to display the
-content on its own.
+本包负责侧边栏的呈现与状态管理，响应式布局则交给应用控制。你可以自行决定何时显示
+侧边栏，以及窗口在什么尺寸下只显示内容区。
 
-## Features
+## 功能特点
 
-- Material and Cupertino sidebar styles
-- Shared selection, expansion, and width state
-- Built-in primary and auxiliary navigation lists
-- Custom content, item styles, tooltips, and action labels
-- Resizable sidebars and an optional Cupertino collapsed bar
-- Window-control obstruction insets and RTL support
+- Material 与 Cupertino 两种侧边栏样式
+- 共享选中项、展开状态和宽度状态
+- 内置主导航与辅助导航列表
+- 支持自定义内容、导航项样式、提示和操作文案
+- 支持拖拽调整宽度和可选的 Cupertino 折叠栏
+- 支持窗口控件避让和从右到左布局
 
-## See it in action
+## 效果展示
 
-| Material                                                                    | Cupertino                                                                                                                                                                                                                         |
-| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ![Material sidebar expanding and collapsing](screenshots/material-sidebar.webp) | **Standard**<br>![Cupertino sidebar expanding and collapsing](screenshots/cupertino-sidebar.webp)<br><br><details><summary><strong>Edge · light</strong></summary><br><img src="screenshots/cupertino-edge-light.webp" alt="Cupertino edge sidebar expanding from its default collapsed state"></details> |
+| Material                                                        | Cupertino                                                                                                                                                                                         |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ![Material 侧边栏展开与折叠动画](screenshots/material-sidebar.webp) | **标准样式**<br>![Cupertino 侧边栏展开与折叠动画](screenshots/cupertino-sidebar.webp)<br><br><details><summary><strong>Edge 样式 · 亮色</strong></summary><br><img src="screenshots/cupertino-edge-light.webp" alt="Cupertino Edge 侧边栏从默认折叠态展开的动画"></details> |
 
-## Getting started
+## 开始使用
 
-Add the package:
+添加依赖：
 
 ```shell
 flutter pub add flutter_adaptive_sidebar
 ```
 
-Use the same controller with either sidebar. The `content` parameter accepts any
-widget. For a ready-made navigation list, use `MaterialSidebarNavigation` or
-`CupertinoSidebarNavigation`; both support destinations pinned to the bottom.
-Their row widgets are `MaterialWideNavigationRailButton` and
-`CupertinoSidebarDestination`, respectively.
+两种侧边栏可以共用同一个控制器，`content` 参数可接收任意组件。如果需要现成的
+导航列表，可以使用 `MaterialSidebarNavigation` 或
+`CupertinoSidebarNavigation`；两者都支持固定在底部的导航项。它们对应的行组件
+分别是 `MaterialWideNavigationRailButton` 和 `CupertinoSidebarDestination`。
 
 ```dart
 final Widget page = AnimatedBuilder(
@@ -72,35 +70,35 @@ final Widget page = AnimatedBuilder(
 );
 ```
 
-Use the controller to select a destination or toggle the sidebar:
+通过控制器选择导航项或切换侧边栏：
 
 ```dart
 controller.select(const SidebarPrimarySelection(0));
 controller.toggleExpanded();
 ```
 
-Dispose the controller when it is no longer needed. For responsive layouts and
-additional configuration, see the [example app](example/lib/main.dart).
+不再使用控制器时，请调用 `dispose()`。响应式布局和其他配置可参考
+[示例应用](example/lib/main.dart)。
 
-## More examples
+## 更多示例
 
 <details>
-<summary><strong>Explore the example app</strong></summary>
+<summary><strong>运行示例应用</strong></summary>
 
 ```shell
 cd example
 fvm flutter run
 ```
 
-The example covers responsive layouts, Material and Cupertino styles, custom
-navigation content, collapsed bars, and window-control obstruction insets.
+示例应用包含响应式布局、Material 与 Cupertino 样式、自定义导航内容、折叠栏和
+窗口控件避让。
 
 </details>
 
-## Development
+## 开发
 
 <details>
-<summary><strong>Local checks</strong></summary>
+<summary><strong>本地检查</strong></summary>
 
 ```shell
 # Format, analyze, and test the package and example application.
@@ -109,7 +107,7 @@ make check
 
 </details>
 
-## Donate
+## 捐赠
 
 [!["Buy Me A Coffee"][buymeacoffee-badge]](https://www.buymeacoffee.com/d49cb87qgww)
 [![Alipay][alipay-badge]][alipay-addr]
@@ -118,10 +116,10 @@ make check
 [![ETH][eth-badge]][eth-addr]
 [![BTC][btc-badge]][btc-addr]
 
-## License
+## 许可证
 
-This project is licensed under the MIT License.
-See [LICENSE](LICENSE) for the full license text.
+本项目基于 MIT License 许可。
+完整许可文本见 [LICENSE](LICENSE)。
 
 ```text
 MIT License

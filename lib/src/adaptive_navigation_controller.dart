@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 
 import 'side_navigation_extent.dart';
+import 'sidebar_destination_selection.dart';
 
 /// Persistent sidebar state.
 ///
@@ -15,36 +16,33 @@ class AdaptiveNavigationController extends ChangeNotifier {
   /// [initialManualWidth] is the remembered drag width. When null, sidebars
   /// use [SideNavigationExtent.resolve].
   AdaptiveNavigationController({
-    int initialIndex = 0,
+    SidebarDestinationSelection initialSelection =
+        const SidebarPrimarySelection(0),
     bool initialExpanded = true,
     double? initialManualWidth,
-  }) : assert(initialIndex >= 0),
-       _selectedIndex = initialIndex,
+  }) : _selection = initialSelection,
        _expanded = initialExpanded,
        _manualWidth = initialManualWidth;
 
-  int _selectedIndex;
+  SidebarDestinationSelection _selection;
   bool _expanded;
   double? _manualWidth;
   bool _manualAboveAuto = false;
   double _dragCurrentWidth = 0;
   bool _resizing = false;
 
-  /// Zero-based index of the selected destination.
-  int get selectedIndex => _selectedIndex;
+  /// Selected primary or auxiliary destination.
+  SidebarDestinationSelection get selection => _selection;
 
   /// Selects [value] and notifies listeners when it changes.
-  set selectedIndex(int value) {
-    if (value < 0) {
-      throw ArgumentError.value(value, 'selectedIndex', 'Must be non-negative');
-    }
-    if (_selectedIndex == value) return;
-    _selectedIndex = value;
+  set selection(SidebarDestinationSelection value) {
+    if (_selection == value) return;
+    _selection = value;
     notifyListeners();
   }
 
-  /// Selects the destination at [index].
-  void select(int index) => selectedIndex = index;
+  /// Selects [value].
+  void select(SidebarDestinationSelection value) => selection = value;
 
   /// Whether the sidebar should use its open, full-width presentation.
   ///

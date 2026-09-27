@@ -1,80 +1,18 @@
+import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
+
+import 'ios_navigation_obstruction.dart';
+
+part 'example_app.dart';
 
 void main() {
   runApp(const AdaptiveSidebarExampleApp());
-}
-
-/// Example host for the Material and Cupertino sidebars.
-class AdaptiveSidebarExampleApp extends StatefulWidget {
-  /// Creates the example app.
-  ///
-  /// [cupertino] forces a sidebar style. When it is null, iOS and macOS use
-  /// the Cupertino sidebar and every other platform uses Material.
-  const AdaptiveSidebarExampleApp({super.key, this.cupertino});
-
-  /// Forces the Cupertino sidebar when true, and Material when false.
-  final bool? cupertino;
-
-  @override
-  State<AdaptiveSidebarExampleApp> createState() =>
-      _AdaptiveSidebarExampleAppState();
-}
-
-class _AdaptiveSidebarExampleAppState extends State<AdaptiveSidebarExampleApp> {
-  ThemeMode _themeMode = ThemeMode.system;
-
-  ThemeData _theme(Brightness brightness) {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: Colors.teal,
-      brightness: brightness,
-    );
-    return ThemeData(
-      colorScheme: colorScheme,
-      cupertinoOverrideTheme: CupertinoThemeData(
-        brightness: brightness,
-        primaryColor: colorScheme.primary,
-        scaffoldBackgroundColor: colorScheme.surface,
-        applyThemeToAll: true,
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Adaptive sidebar',
-      theme: _theme(Brightness.light),
-      darkTheme: _theme(Brightness.dark),
-      themeMode: _themeMode,
-      home: IosNavigationObstruction(
-        child: AdaptiveSidebarExample(
-          cupertino: widget.cupertino,
-          themeMode: _themeMode,
-          onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
-        ),
-      ),
-    );
-  }
-}
-
-enum _SidebarStyle { material, cupertino }
-
-enum _ExpansionMode { automatic, collapsed, expanded }
-
-enum _CollapsedBarTransition { drop, fade }
-
-enum _CollapsedBarSize { measured, current }
-
-_SidebarStyle _platformSidebarStyle() {
-  return switch (defaultTargetPlatform) {
-    TargetPlatform.iOS || TargetPlatform.macOS => _SidebarStyle.cupertino,
-    _ => _SidebarStyle.material,
-  };
 }
 
 /// Demonstrates style switching and size-based sidebar placement.
@@ -139,12 +77,17 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
 
   final AdaptiveNavigationController _controller =
       AdaptiveNavigationController();
-  int? _selectedAuxiliaryIndex;
   late _SidebarStyle _style;
   _CollapsedBarTransition _collapsedBarTransition =
       _CollapsedBarTransition.drop;
-  _CollapsedBarSize _collapsedBarSize = _CollapsedBarSize.measured;
+  CupertinoSidebarCollapsedBarPlacement _collapsedBarPlacement =
+      CupertinoSidebarCollapsedBarPlacement.toolbarAnchor;
   bool _collapsedBarSeparator = false;
+  bool _collapsedBarIcons = false;
+  CupertinoSidebarStyle _cupertinoStyle = CupertinoSidebarStyle.liquid;
+  _ToolbarTopInsetMode _toolbarTopInsetMode = _ToolbarTopInsetMode.automatic;
+  double _customToolbarTopInset =
+      CupertinoSidebarToolbarGeometry.compact.topInset;
   _ExpansionMode _mode = _ExpansionMode.automatic;
   bool _autoPaused = false;
   bool _applyingExpansion = false;
@@ -158,7 +101,10 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
   bool _customTooltip = false;
   bool _customLabels = false;
   bool _customContent = false;
+  bool _customSideStyle = false;
+  bool _customBarStyle = false;
   String? _customPageTitle;
+  bool _placementDemoVisible = false;
   TextDirection _textDirection = TextDirection.ltr;
 
   @override
@@ -210,26 +156,30 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
   }
 
   void _selectPrimary(int index) {
-    setState(() {
-      _selectedAuxiliaryIndex = null;
-      _customPageTitle = null;
-    });
-    _controller.select(index);
+    _onSelectionChanged(SidebarPrimarySelection(index));
   }
 
   void _selectAuxiliary(int index) {
+    _onSelectionChanged(SidebarAuxiliarySelection(index));
+  }
+
+  void _onSelectionChanged(SidebarDestinationSelection selection) {
     setState(() {
-      _selectedAuxiliaryIndex = index;
       _customPageTitle = null;
+      _placementDemoVisible = false;
     });
+    _controller.select(selection);
   }
 
   void _selectCustomPage(String title) {
-    setState(() {
-      _selectedAuxiliaryIndex = null;
-      _customPageTitle = title;
-    });
+    setState(() => _customPageTitle = title);
   }
+
+  bool get _settingsSelected =>
+      _customPageTitle == null &&
+      _controller.selection is SidebarAuxiliarySelection;
+
+  int get _primaryIndex => _controller.selection.primaryIndex ?? 0;
 
   Widget _sidebarContent() {
     if (!_customContent) return _navigation();
@@ -237,9 +187,11 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
       style: _style,
       destinations: _destinations,
       settingsDestination: _settingsDestination,
-      selectedIndex: _controller.selectedIndex,
-      settingsSelected: _selectedAuxiliaryIndex != null,
+      selectedIndex: _primaryIndex,
+      settingsSelected: _settingsSelected,
       selectedLabel: _customPageTitle,
+      itemStyle: _customSideStyle ? _kCustomSideItemStyle : null,
+      materialItemStyle: _customSideStyle ? _kCustomMaterialItemStyle : null,
       onDestinationSelected: _selectPrimary,
       onSettingsSelected: () => _selectAuxiliary(0),
       onLabelSelected: _selectCustomPage,
@@ -250,20 +202,18 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
     if (_style == _SidebarStyle.material) {
       return MaterialSidebarNavigation(
         destinations: _destinations,
-        selectedIndex: _controller.selectedIndex,
-        onDestinationSelected: _selectPrimary,
+        selection: _controller.selection,
+        onSelectionChanged: _onSelectionChanged,
         auxiliaryDestinations: const [_settingsDestination],
-        selectedAuxiliaryIndex: _selectedAuxiliaryIndex,
-        onAuxiliaryDestinationSelected: _selectAuxiliary,
+        itemStyle: _customSideStyle ? _kCustomMaterialItemStyle : null,
       );
     }
     return CupertinoSidebarNavigation(
       destinations: _destinations,
-      selectedIndex: _controller.selectedIndex,
-      onDestinationSelected: _selectPrimary,
+      selection: _controller.selection,
+      onSelectionChanged: _onSelectionChanged,
       auxiliaryDestinations: const [_settingsDestination],
-      selectedAuxiliaryIndex: _selectedAuxiliaryIndex,
-      onAuxiliaryDestinationSelected: _selectAuxiliary,
+      itemStyle: _customSideStyle ? _kCustomSideItemStyle : null,
     );
   }
 
@@ -290,6 +240,63 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
     });
   }
 
+  Widget _cupertinoSidebar(Widget body) {
+    final toolbarGeometry = _toolbarGeometry;
+    final showingPrimary =
+        _controller.selection is SidebarPrimarySelection &&
+        _customPageTitle == null;
+    final collapsedBar = _customContent
+        ? null
+        : CupertinoSidebarCollapsedBar(
+            destinations: _destinations,
+            selectedIndex: showingPrimary ? _primaryIndex : null,
+            showIcons: _collapsedBarIcons,
+            itemStyle: _customBarStyle ? _kCustomBarItemStyle : null,
+            onDestinationSelected: _selectPrimary,
+          );
+    final transition = switch (_collapsedBarTransition) {
+      _CollapsedBarTransition.drop =>
+        CupertinoSidebarCollapsedBarTransition.drop,
+      _CollapsedBarTransition.fade =>
+        CupertinoSidebarCollapsedBarTransition.fade,
+    };
+    // One constructor sets the glass and the selection fill together.
+    return switch (_cupertinoStyle) {
+      CupertinoSidebarStyle.liquid => CupertinoSidebar(
+        controller: _controller,
+        content: _sidebarContent(),
+        scaffoldBackgroundColor: Colors.transparent,
+        collapsedBarPlacement: _collapsedBarPlacement,
+        collapsedBarSeparator: _collapsedBarSeparator,
+        collapsedBar: collapsedBar,
+        collapsedBarTransitionBuilder: transition,
+        toolbarGeometry: toolbarGeometry,
+        extent: _extent,
+        dragHandleBuilder: _dragHandleBuilder,
+        tooltipBuilder: _tooltipBuilder,
+        expandLabel: _customLabels ? 'Show sidebar' : null,
+        collapseLabel: _customLabels ? 'Hide sidebar' : null,
+        child: body,
+      ),
+      CupertinoSidebarStyle.liquidEdge => CupertinoSidebar.edge(
+        controller: _controller,
+        content: _sidebarContent(),
+        scaffoldBackgroundColor: Colors.transparent,
+        collapsedBarPlacement: _collapsedBarPlacement,
+        collapsedBarSeparator: _collapsedBarSeparator,
+        collapsedBar: collapsedBar,
+        collapsedBarTransitionBuilder: transition,
+        toolbarGeometry: toolbarGeometry,
+        extent: _extent,
+        dragHandleBuilder: _dragHandleBuilder,
+        tooltipBuilder: _tooltipBuilder,
+        expandLabel: _customLabels ? 'Show sidebar' : null,
+        collapseLabel: _customLabels ? 'Hide sidebar' : null,
+        child: body,
+      ),
+    };
+  }
+
   void _toggleStyle() {
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
@@ -310,6 +317,26 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
     minimum: _minimumWidth,
     maximum: _maximumWidth,
   );
+
+  CupertinoSidebarToolbarGeometry get _toolbarGeometry =>
+      switch (_toolbarTopInsetMode) {
+        _ToolbarTopInsetMode.automatic =>
+          CupertinoSidebarToolbarGeometry.standard,
+        _ToolbarTopInsetMode.unified => CupertinoSidebarToolbarGeometry(
+          contentHeight: CupertinoSidebarToolbarGeometry.standard.contentHeight,
+          collapsedBarHeight:
+              CupertinoSidebarToolbarGeometry.standard.collapsedBarHeight,
+          height: CupertinoSidebarToolbarGeometry.standard.height,
+          topInset: CupertinoSidebarToolbarGeometry.compact.topInset,
+        ),
+        _ToolbarTopInsetMode.custom => CupertinoSidebarToolbarGeometry(
+          contentHeight: CupertinoSidebarToolbarGeometry.standard.contentHeight,
+          collapsedBarHeight:
+              CupertinoSidebarToolbarGeometry.standard.collapsedBarHeight,
+          height: CupertinoSidebarToolbarGeometry.standard.height,
+          topInset: _customToolbarTopInset,
+        ),
+      };
 
   void _setAutomaticExpandedWidth(double value) {
     setState(() => _automaticExpandedWidth = value);
@@ -376,8 +403,8 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
     final body = _ExampleBody(
       style: _style,
       mode: _mode,
-      selectedIndex: _controller.selectedIndex,
-      settingsSelected: _selectedAuxiliaryIndex != null,
+      selectedIndex: _primaryIndex,
+      settingsSelected: _settingsSelected,
       customPageTitle: _customPageTitle,
       itemCount: _homeItemCount,
       themeMode: widget.themeMode,
@@ -393,6 +420,15 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
         customLabels: _customLabels,
         customContent: _customContent,
       ),
+      toolbarGeometry: _toolbarGeometry,
+      toolbarTopInsetMode: _toolbarTopInsetMode,
+      customToolbarTopInset: _customToolbarTopInset,
+      onToolbarTopInsetModeChanged: (value) =>
+          setState(() => _toolbarTopInsetMode = value),
+      onCustomToolbarTopInsetChanged: (value) => setState(() {
+        _toolbarTopInsetMode = _ToolbarTopInsetMode.custom;
+        _customToolbarTopInset = value;
+      }),
       onToggleStyle: _toggleStyle,
       onToggleDirection: _toggleDirection,
       onModeChanged: _onModeChanged,
@@ -408,15 +444,28 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
       onCustomTooltipChanged: (value) => setState(() => _customTooltip = value),
       onCustomLabelsChanged: (value) => setState(() => _customLabels = value),
       onCustomContentChanged: (value) => setState(() => _customContent = value),
+      customSideStyle: _customSideStyle,
+      onCustomSideStyleChanged: (value) =>
+          setState(() => _customSideStyle = value),
+      customBarStyle: _customBarStyle,
+      onCustomBarStyleChanged: (value) =>
+          setState(() => _customBarStyle = value),
       collapsedBarTransition: _collapsedBarTransition,
       onCollapsedBarTransitionChanged: (value) =>
           setState(() => _collapsedBarTransition = value),
-      collapsedBarSize: _collapsedBarSize,
-      onCollapsedBarSizeChanged: (value) =>
-          setState(() => _collapsedBarSize = value),
+      collapsedBarPlacement: _collapsedBarPlacement,
+      onCollapsedBarPlacementChanged: (value) =>
+          setState(() => _collapsedBarPlacement = value),
+      onOpenPlacementDemo: () => setState(() => _placementDemoVisible = true),
       collapsedBarSeparator: _collapsedBarSeparator,
       onCollapsedBarSeparatorChanged: (value) =>
           setState(() => _collapsedBarSeparator = value),
+      collapsedBarIcons: _collapsedBarIcons,
+      onCollapsedBarIconsChanged: (value) =>
+          setState(() => _collapsedBarIcons = value),
+      cupertinoStyle: _cupertinoStyle,
+      onCupertinoStyleChanged: (value) =>
+          setState(() => _cupertinoStyle = value),
     );
     final Widget page;
     if (_style == _SidebarStyle.material) {
@@ -426,7 +475,7 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
             controller: _controller,
             content: _sidebarContent(),
             extent: _extent,
-            style: MaterialSidebarStyle(collapsedExtent: _collapsedExtent),
+            collapsedExtent: _collapsedExtent,
             dragHandleBuilder: _dragHandleBuilder,
             tooltipBuilder: _tooltipBuilder,
             expandLabel: _customLabels ? 'Show sidebar' : null,
@@ -436,1188 +485,37 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
         ],
       );
     } else {
-      final collapsedBarHeight = switch (_collapsedBarSize) {
-        _CollapsedBarSize.measured =>
-          kCupertinoSidebarCollapsedBarMeasuredHeight,
-        _CollapsedBarSize.current => SidebarLeadingScope.buttonExtent,
-      };
-      final collapsedBarMinimumDestinationExtent = switch (_collapsedBarSize) {
-        _CollapsedBarSize.measured =>
-          kCupertinoSidebarCollapsedBarMeasuredWidth,
-        _CollapsedBarSize.current =>
-          kCupertinoSidebarCollapsedBarMinimumDestinationExtent,
-      };
-      final showingPrimary =
-          _selectedAuxiliaryIndex == null && _customPageTitle == null;
-      page = CupertinoSidebar(
-        controller: _controller,
-        content: _sidebarContent(),
-        collapsedBarHeight: collapsedBarHeight,
-        collapsedBarMinimumDestinationExtent:
-            collapsedBarMinimumDestinationExtent,
-        collapsedBarSeparator: _collapsedBarSeparator,
-        collapsedBar: _customContent
-            ? null
-            : CupertinoSidebarCollapsedBar(
-                destinations: _destinations,
-                selectedIndex: showingPrimary
-                    ? _controller.selectedIndex
-                    : null,
-                height: collapsedBarHeight,
-                onDestinationSelected: _selectPrimary,
-              ),
-        collapsedBarTransitionBuilder: switch (_collapsedBarTransition) {
-          _CollapsedBarTransition.drop =>
-            CupertinoSidebarCollapsedBarTransition.drop,
-          _CollapsedBarTransition.fade =>
-            CupertinoSidebarCollapsedBarTransition.fade,
-        },
-        extent: _extent,
-        dragHandleBuilder: _dragHandleBuilder,
-        tooltipBuilder: _tooltipBuilder,
-        expandLabel: _customLabels ? 'Show sidebar' : null,
-        collapseLabel: _customLabels ? 'Hide sidebar' : null,
-        child: body,
-      );
-    }
-
-    return Directionality(textDirection: _textDirection, child: page);
-  }
-}
-
-class _SettingsValues {
-  const _SettingsValues({
-    required this.preferredWidth,
-    required this.minimumWidth,
-    required this.maximumWidth,
-    required this.collapsedExtent,
-    required this.automaticExpandedWidth,
-    required this.customDragHandle,
-    required this.customTooltip,
-    required this.customLabels,
-    required this.customContent,
-  });
-
-  final double preferredWidth;
-  final double minimumWidth;
-  final double maximumWidth;
-  final double collapsedExtent;
-  final double automaticExpandedWidth;
-  final bool customDragHandle;
-  final bool customTooltip;
-  final bool customLabels;
-  final bool customContent;
-}
-
-class _ExampleBody extends StatelessWidget {
-  const _ExampleBody({
-    required this.style,
-    required this.mode,
-    required this.selectedIndex,
-    required this.settingsSelected,
-    required this.customPageTitle,
-    required this.itemCount,
-    required this.themeMode,
-    required this.textDirection,
-    required this.settings,
-    required this.onToggleStyle,
-    required this.onToggleDirection,
-    required this.onModeChanged,
-    required this.onThemeModeChanged,
-    required this.onPreferredWidthChanged,
-    required this.onMinimumWidthChanged,
-    required this.onMaximumWidthChanged,
-    required this.onCollapsedExtentChanged,
-    required this.onAutomaticExpandedWidthChanged,
-    required this.onCustomDragHandleChanged,
-    required this.onCustomTooltipChanged,
-    required this.onCustomLabelsChanged,
-    required this.onCustomContentChanged,
-    required this.collapsedBarTransition,
-    required this.onCollapsedBarTransitionChanged,
-    required this.collapsedBarSize,
-    required this.onCollapsedBarSizeChanged,
-    required this.collapsedBarSeparator,
-    required this.onCollapsedBarSeparatorChanged,
-  });
-
-  final _SidebarStyle style;
-  final _ExpansionMode mode;
-  final int selectedIndex;
-  final bool settingsSelected;
-  final String? customPageTitle;
-  final int itemCount;
-  final ThemeMode themeMode;
-  final TextDirection textDirection;
-  final _SettingsValues settings;
-  final VoidCallback onToggleStyle;
-  final VoidCallback onToggleDirection;
-  final ValueChanged<_ExpansionMode> onModeChanged;
-  final ValueChanged<ThemeMode> onThemeModeChanged;
-  final ValueChanged<double> onPreferredWidthChanged;
-  final ValueChanged<double> onMinimumWidthChanged;
-  final ValueChanged<double> onMaximumWidthChanged;
-  final ValueChanged<double> onCollapsedExtentChanged;
-  final ValueChanged<double> onAutomaticExpandedWidthChanged;
-  final ValueChanged<bool> onCustomDragHandleChanged;
-  final ValueChanged<bool> onCustomTooltipChanged;
-  final ValueChanged<bool> onCustomLabelsChanged;
-  final ValueChanged<bool> onCustomContentChanged;
-  final _CollapsedBarTransition collapsedBarTransition;
-  final ValueChanged<_CollapsedBarTransition> onCollapsedBarTransitionChanged;
-  final _CollapsedBarSize collapsedBarSize;
-  final ValueChanged<_CollapsedBarSize> onCollapsedBarSizeChanged;
-  final bool collapsedBarSeparator;
-  final ValueChanged<bool> onCollapsedBarSeparatorChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final appearance = _AppearanceButton(
-      style: style,
-      themeMode: themeMode,
-      onChanged: onThemeModeChanged,
-    );
-    final direction = _DirectionButton(
-      style: style,
-      direction: textDirection,
-      onPressed: onToggleDirection,
-    );
-    final pageSlivers = _pageSlivers();
-    if (style == _SidebarStyle.cupertino) {
-      final reserved =
-          SidebarLeadingScope.maybeOf(context)?.reservedExtent ?? 0;
-      final cupertinoText = CupertinoTheme.of(context).textTheme.textStyle;
-      return DefaultTextStyle(
-        style: cupertinoText,
-        child: CupertinoPageScaffold(
-          child: CustomScrollView(
-            slivers: [
-              CupertinoSliverNavigationBar(
-                // Fully clear page color, not a different tint. Automatic
-                // visibility keeps the bar opaque until content scrolls
-                // under it, which is when the blur becomes visible.
-                backgroundColor: CupertinoTheme.of(
-                  context,
-                ).scaffoldBackgroundColor.withValues(alpha: 0),
-                automaticBackgroundVisibility: true,
-                enableBackgroundFilterBlur: true,
-                border: null,
-                leading: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (reserved != 0) SizedBox(width: reserved),
-                    CupertinoButton(
-                      key: const ValueKey('style-button'),
-                      padding: EdgeInsets.zero,
-                      onPressed: onToggleStyle,
-                      child: const Icon(CupertinoIcons.device_phone_portrait),
-                    ),
-                  ],
-                ),
-                largeTitle: const Text('Adaptive sidebar'),
-                middle: const CupertinoSidebarMiddle(
-                  title: Text('Adaptive sidebar'),
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [appearance, direction],
+      page = _cupertinoSidebar(
+        Navigator(
+          key: const ValueKey('cupertino-placement-demo-navigator'),
+          pages: [
+            _PlacementDemoRoutePage(
+              key: const ValueKey('cupertino-example-root-page'),
+              child: body,
+            ),
+            if (_placementDemoVisible)
+              _PlacementDemoRoutePage(
+                key: const ValueKey('cupertino-placement-demo-page'),
+                child: _PlacementDemoPage(
+                  placement: _collapsedBarPlacement,
+                  toolbarGeometry: _toolbarGeometry,
                 ),
               ),
-              ...pageSlivers,
-            ],
-          ),
-        ),
-      );
-    }
-    return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            leading: IconButton(
-              key: const ValueKey('style-button'),
-              tooltip: 'Use Cupertino',
-              onPressed: onToggleStyle,
-              icon: const Icon(Icons.phone_iphone),
-            ),
-            title: const Text('Adaptive sidebar'),
-            actions: [appearance, direction],
-          ),
-          ...pageSlivers,
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _pageSlivers() {
-    if (settingsSelected) {
-      return [
-        _SettingsPage(
-          style: style,
-          settings: settings,
-          mode: mode,
-          onModeChanged: onModeChanged,
-          collapsedBarTransition: collapsedBarTransition,
-          onCollapsedBarTransitionChanged: onCollapsedBarTransitionChanged,
-          collapsedBarSize: collapsedBarSize,
-          onCollapsedBarSizeChanged: onCollapsedBarSizeChanged,
-          collapsedBarSeparator: collapsedBarSeparator,
-          onCollapsedBarSeparatorChanged: onCollapsedBarSeparatorChanged,
-          onPreferredWidthChanged: onPreferredWidthChanged,
-          onMinimumWidthChanged: onMinimumWidthChanged,
-          onMaximumWidthChanged: onMaximumWidthChanged,
-          onCollapsedExtentChanged: onCollapsedExtentChanged,
-          onAutomaticExpandedWidthChanged: onAutomaticExpandedWidthChanged,
-          onCustomDragHandleChanged: onCustomDragHandleChanged,
-          onCustomTooltipChanged: onCustomTooltipChanged,
-          onCustomLabelsChanged: onCustomLabelsChanged,
-          onCustomContentChanged: onCustomContentChanged,
-        ),
-      ];
-    }
-    final customPageTitle = this.customPageTitle;
-    if (customPageTitle != null) {
-      return [
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: Center(child: Text(customPageTitle)),
-        ),
-      ];
-    }
-    return [
-      switch (selectedIndex) {
-        0 => _HomeList(style: style, itemCount: itemCount),
-        _ => const SliverFillRemaining(
-          hasScrollBody: false,
-          child: Center(child: Text('Search')),
-        ),
-      },
-    ];
-  }
-}
-
-class _AppearanceButton extends StatelessWidget {
-  const _AppearanceButton({
-    required this.style,
-    required this.themeMode,
-    required this.onChanged,
-  });
-
-  final _SidebarStyle style;
-  final ThemeMode themeMode;
-  final ValueChanged<ThemeMode> onChanged;
-
-  void _cycle() {
-    final next = switch (themeMode) {
-      ThemeMode.system => ThemeMode.light,
-      ThemeMode.light => ThemeMode.dark,
-      ThemeMode.dark => ThemeMode.system,
-    };
-    onChanged(next);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = switch (themeMode) {
-      ThemeMode.system =>
-        style == _SidebarStyle.cupertino
-            ? CupertinoIcons.circle_lefthalf_fill
-            : Icons.brightness_auto,
-      ThemeMode.light =>
-        style == _SidebarStyle.cupertino
-            ? CupertinoIcons.sun_max
-            : Icons.light_mode,
-      ThemeMode.dark =>
-        style == _SidebarStyle.cupertino
-            ? CupertinoIcons.moon
-            : Icons.dark_mode,
-    };
-    if (style == _SidebarStyle.cupertino) {
-      return CupertinoButton(
-        key: const ValueKey('appearance-button'),
-        padding: EdgeInsets.zero,
-        onPressed: _cycle,
-        child: Icon(icon),
-      );
-    }
-    return IconButton(
-      key: const ValueKey('appearance-button'),
-      tooltip: 'Appearance',
-      onPressed: _cycle,
-      icon: Icon(icon),
-    );
-  }
-}
-
-class _DirectionButton extends StatelessWidget {
-  const _DirectionButton({
-    required this.style,
-    required this.direction,
-    required this.onPressed,
-  });
-
-  final _SidebarStyle style;
-  final TextDirection direction;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final leftToRight = direction == TextDirection.ltr;
-    final icon = leftToRight
-        ? Icons.format_textdirection_l_to_r
-        : Icons.format_textdirection_r_to_l;
-    final tooltip = leftToRight ? 'Use right-to-left' : 'Use left-to-right';
-    if (style == _SidebarStyle.cupertino) {
-      return CupertinoButton(
-        key: const ValueKey('direction-button'),
-        padding: EdgeInsets.zero,
-        onPressed: onPressed,
-        child: Icon(icon),
-      );
-    }
-    return IconButton(
-      key: const ValueKey('direction-button'),
-      tooltip: tooltip,
-      onPressed: onPressed,
-      icon: Icon(icon),
-    );
-  }
-}
-
-class _TransitionControls extends StatelessWidget {
-  const _TransitionControls({
-    required this.transition,
-    required this.onChanged,
-  });
-
-  final _CollapsedBarTransition transition;
-  final ValueChanged<_CollapsedBarTransition> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Bar animation'),
-          const SizedBox(height: 8),
-          CupertinoSlidingSegmentedControl<_CollapsedBarTransition>(
-            groupValue: transition,
-            children: const {
-              _CollapsedBarTransition.drop: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Text('Drop'),
-              ),
-              _CollapsedBarTransition.fade: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Text('Fade'),
-              ),
-            },
-            onValueChanged: (value) {
-              if (value != null) onChanged(value);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BarSizeControls extends StatelessWidget {
-  const _BarSizeControls({required this.size, required this.onChanged});
-
-  final _CollapsedBarSize size;
-  final ValueChanged<_CollapsedBarSize> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Bar size'),
-          const SizedBox(height: 8),
-          CupertinoSlidingSegmentedControl<_CollapsedBarSize>(
-            groupValue: size,
-            children: const {
-              _CollapsedBarSize.measured: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Text('Measured'),
-              ),
-              _CollapsedBarSize.current: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Text('Current'),
-              ),
-            },
-            onValueChanged: (value) {
-              if (value != null) onChanged(value);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ExpansionControls extends StatelessWidget {
-  const _ExpansionControls({
-    required this.style,
-    required this.mode,
-    required this.onChanged,
-  });
-
-  final _SidebarStyle style;
-  final _ExpansionMode mode;
-  final ValueChanged<_ExpansionMode> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    const labels = {
-      _ExpansionMode.automatic: 'Auto',
-      _ExpansionMode.collapsed: 'Coll',
-      _ExpansionMode.expanded: 'Expand',
-    };
-    final control = style == _SidebarStyle.cupertino
-        ? CupertinoSlidingSegmentedControl<_ExpansionMode>(
-            groupValue: mode,
-            children: {
-              for (final entry in labels.entries)
-                entry.key: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text(entry.value),
-                ),
-            },
-            onValueChanged: (value) {
-              if (value != null) onChanged(value);
-            },
-          )
-        : SegmentedButton<_ExpansionMode>(
-            segments: [
-              for (final entry in labels.entries)
-                ButtonSegment(value: entry.key, label: Text(entry.value)),
-            ],
-            selected: {mode},
-            onSelectionChanged: (selection) => onChanged(selection.first),
-          );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [const Text('Expansion'), const SizedBox(height: 8), control],
-      ),
-    );
-  }
-}
-
-class _CustomSidebarContent extends StatelessWidget {
-  const _CustomSidebarContent({
-    required this.style,
-    required this.destinations,
-    required this.settingsDestination,
-    required this.selectedIndex,
-    required this.settingsSelected,
-    required this.selectedLabel,
-    required this.onDestinationSelected,
-    required this.onSettingsSelected,
-    required this.onLabelSelected,
-  });
-
-  final _SidebarStyle style;
-  final List<AdaptiveNavigationDestination> destinations;
-  final AdaptiveNavigationDestination settingsDestination;
-  final int selectedIndex;
-  final bool settingsSelected;
-  final String? selectedLabel;
-  final ValueChanged<int> onDestinationSelected;
-  final VoidCallback onSettingsSelected;
-  final ValueChanged<String> onLabelSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    if (style == _SidebarStyle.cupertino) return _cupertino(context);
-    return _material(context);
-  }
-
-  Widget _material(BuildContext context) {
-    final metrics = MaterialSidebarMetrics.of(context);
-    final animation = NavigationRail.extendedAnimation(context);
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, child) => SizedBox(
-        width: lerpDouble(
-          metrics.collapsedWidth,
-          metrics.expandedWidth,
-          animation.value,
-        ),
-        child: child,
-      ),
-      child: ListView(
-        key: const ValueKey('custom-sidebar-content'),
-        children: [
-          for (final (index, destination) in destinations.indexed)
-            MaterialWideNavigationRailButton(
-              slotKey: ValueKey('custom-sidebar-destination-slot-$index'),
-              buttonKey: ValueKey('custom-sidebar-destination-$index'),
-              animation: animation,
-              collapsedRailWidth: metrics.collapsedWidth,
-              expandedRailWidth: metrics.expandedWidth,
-              destination: destination,
-              selected:
-                  selectedLabel == null &&
-                  !settingsSelected &&
-                  selectedIndex == index,
-              onPressed: () => onDestinationSelected(index),
-            ),
-          _MaterialNoteButton(
-            animation: animation,
-            selected: selectedLabel == 'Note',
-            onPressed: () => onLabelSelected('Note'),
-          ),
-          MaterialWideNavigationRailButton(
-            slotKey: const ValueKey('custom-sidebar-settings-slot'),
-            buttonKey: const ValueKey('custom-sidebar-settings'),
-            animation: animation,
-            collapsedRailWidth: metrics.collapsedWidth,
-            expandedRailWidth: metrics.expandedWidth,
-            destination: settingsDestination,
-            selected: settingsSelected,
-            onPressed: onSettingsSelected,
-          ),
-          _ReminderLists(
-            expansion: animation,
-            cupertino: false,
-            selectedLabel: selectedLabel,
-            onSelected: onLabelSelected,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _cupertino(BuildContext context) {
-    final primary = CupertinoTheme.of(context).primaryColor;
-    return ListView(
-      key: const ValueKey('custom-sidebar-content'),
-      padding: const EdgeInsets.only(
-        top: kMinInteractiveDimensionCupertino + 24,
-      ),
-      children: [
-        for (final (index, destination) in destinations.indexed)
-          CupertinoSidebarDestination(
-            key: ValueKey('custom-sidebar-destination-$index'),
-            destination: destination,
-            selected:
-                selectedLabel == null &&
-                !settingsSelected &&
-                selectedIndex == index,
-            onPressed: () => onDestinationSelected(index),
-          ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          child: CupertinoButton(
-            key: const ValueKey('custom-sidebar-note'),
-            padding: const EdgeInsetsDirectional.symmetric(horizontal: 12),
-            minimumSize: const Size(0, 44),
-            alignment: AlignmentDirectional.centerStart,
-            color: selectedLabel == 'Note'
-                ? primary.withValues(alpha: 0.14)
-                : null,
-            onPressed: () => onLabelSelected('Note'),
-            child: const Row(
-              children: [
-                Icon(CupertinoIcons.pencil),
-                SizedBox(width: 12),
-                Text('Note'),
-              ],
-            ),
-          ),
-        ),
-        CupertinoSidebarDestination(
-          key: const ValueKey('custom-sidebar-settings'),
-          destination: settingsDestination,
-          selected: settingsSelected,
-          onPressed: onSettingsSelected,
-        ),
-        _ReminderLists(
-          expansion: const AlwaysStoppedAnimation(1),
-          cupertino: true,
-          selectedLabel: selectedLabel,
-          onSelected: onLabelSelected,
-        ),
-      ],
-    );
-  }
-}
-
-class _MaterialNoteButton extends StatelessWidget {
-  const _MaterialNoteButton({
-    required this.animation,
-    required this.selected,
-    required this.onPressed,
-  });
-
-  final Animation<double> animation;
-  final bool selected;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = IconTheme.of(context).color;
-    final iconColor = selected ? Theme.of(context).colorScheme.primary : color;
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, _) {
-        final showLabel = animation.value > 0.6;
-        return InkWell(
-          key: const ValueKey('custom-sidebar-note'),
-          onTap: onPressed,
-          child: SizedBox(
-            height: 56,
-            child: Row(
-              children: [
-                const SizedBox(width: 36),
-                Icon(Icons.note_alt_outlined, color: iconColor),
-                if (showLabel) ...[
-                  const SizedBox(width: 12),
-                  const Text('Note'),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ReminderEntry {
-  const _ReminderEntry({
-    required this.label,
-    required this.materialIcon,
-    required this.cupertinoIcon,
-    required this.color,
-    this.count,
-  });
-
-  final String label;
-  final IconData materialIcon;
-  final IconData cupertinoIcon;
-  final Color color;
-  final int? count;
-}
-
-const List<_ReminderEntry> _smartLists = [
-  _ReminderEntry(
-    label: 'Today',
-    materialIcon: Icons.calendar_today_outlined,
-    cupertinoIcon: CupertinoIcons.calendar,
-    color: Color(0xFF007AFF),
-  ),
-  _ReminderEntry(
-    label: 'Scheduled',
-    materialIcon: Icons.schedule,
-    cupertinoIcon: CupertinoIcons.clock,
-    color: Color(0xFFFF3B30),
-  ),
-  _ReminderEntry(
-    label: 'All',
-    materialIcon: Icons.inbox_outlined,
-    cupertinoIcon: CupertinoIcons.tray,
-    color: Color(0xFF8E8E93),
-  ),
-  _ReminderEntry(
-    label: 'Flagged',
-    materialIcon: Icons.flag_outlined,
-    cupertinoIcon: CupertinoIcons.flag,
-    color: Color(0xFFFF9500),
-  ),
-];
-
-const List<_ReminderEntry> _myLists = [
-  _ReminderEntry(
-    label: 'Groceries',
-    materialIcon: Icons.circle,
-    cupertinoIcon: CupertinoIcons.circle_fill,
-    color: Color(0xFFFFCC00),
-    count: 4,
-  ),
-  _ReminderEntry(
-    label: 'Errands',
-    materialIcon: Icons.circle,
-    cupertinoIcon: CupertinoIcons.circle_fill,
-    color: Color(0xFFAF52DE),
-    count: 2,
-  ),
-];
-
-class _ReminderLists extends StatelessWidget {
-  const _ReminderLists({
-    required this.expansion,
-    required this.cupertino,
-    required this.selectedLabel,
-    required this.onSelected,
-  });
-
-  final Animation<double> expansion;
-  final bool cupertino;
-  final String? selectedLabel;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: expansion,
-      builder: (context, _) {
-        final showLabels = expansion.value > 0.6;
-        return Column(
-          key: const ValueKey('custom-sidebar-lists'),
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (showLabels) const _ReminderHeader('Lists'),
-            for (final entry in _smartLists)
-              _ReminderRow(
-                entry: entry,
-                cupertino: cupertino,
-                showLabel: showLabels,
-                selected: selectedLabel == entry.label,
-                onPressed: () => onSelected(entry.label),
-              ),
-            if (showLabels) const _ReminderHeader('My Lists'),
-            for (final entry in _myLists)
-              _ReminderRow(
-                entry: entry,
-                cupertino: cupertino,
-                showLabel: showLabels,
-                selected: selectedLabel == entry.label,
-                onPressed: () => onSelected(entry.label),
-              ),
-            if (showLabels)
-              const _ReminderSummary()
-            else
-              _CollapsedSummary(cupertino: cupertino),
           ],
-        );
-      },
-    );
-  }
-}
-
-class _ReminderHeader extends StatelessWidget {
-  const _ReminderHeader(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-}
-
-class _ReminderRow extends StatelessWidget {
-  const _ReminderRow({
-    required this.entry,
-    required this.cupertino,
-    required this.showLabel,
-    required this.selected,
-    required this.onPressed,
-  });
-
-  final _ReminderEntry entry;
-  final bool cupertino;
-  final bool showLabel;
-  final bool selected;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = Icon(
-      cupertino ? entry.cupertinoIcon : entry.materialIcon,
-      color: entry.color,
-      size: 22,
-    );
-    final background = selected ? entry.color.withValues(alpha: 0.16) : null;
-    if (!showLabel) {
-      return InkWell(
-        onTap: onPressed,
-        child: ColoredBox(
-          color: background ?? const Color(0x00000000),
-          child: SizedBox(height: 44, child: Center(child: icon)),
+          onDidRemovePage: (page) {
+            if (page.key != const ValueKey('cupertino-placement-demo-page') ||
+                !_placementDemoVisible) {
+              return;
+            }
+            setState(() => _placementDemoVisible = false);
+          },
         ),
       );
     }
-    final row = Row(
-      children: [
-        const SizedBox(width: 16),
-        icon,
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            entry.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        if (entry.count != null) Text('${entry.count}'),
-        const SizedBox(width: 16),
-      ],
-    );
-    if (cupertino) {
-      return CupertinoButton(
-        padding: EdgeInsets.zero,
-        minimumSize: const Size(0, 36),
-        color: background,
-        onPressed: onPressed,
-        child: SizedBox(width: double.infinity, child: row),
-      );
-    }
-    return InkWell(
-      onTap: onPressed,
-      child: ColoredBox(
-        color: background ?? const Color(0x00000000),
-        child: SizedBox(height: 40, child: row),
-      ),
-    );
-  }
-}
 
-class _ReminderSummary extends StatelessWidget {
-  const _ReminderSummary();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Summary',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-          SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(child: _SummaryChip(label: '3 due')),
-              SizedBox(width: 8),
-              Expanded(child: _SummaryChip(label: '1 flagged')),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryChip extends StatelessWidget {
-  const _SummaryChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0x14007AFF),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Center(
-          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
-        ),
-      ),
-    );
-  }
-}
-
-class _CollapsedSummary extends StatelessWidget {
-  const _CollapsedSummary({required this.cupertino});
-
-  final bool cupertino;
-
-  @override
-  Widget build(BuildContext context) {
-    final icons = cupertino
-        ? const [CupertinoIcons.calendar, CupertinoIcons.flag]
-        : const [Icons.calendar_today_outlined, Icons.flag_outlined];
-    return Column(
-      children: [
-        for (final icon in icons)
-          SizedBox(height: 32, child: Center(child: Icon(icon, size: 18))),
-      ],
-    );
-  }
-}
-
-const List<Color> _homeItemColors = <Color>[
-  Color(0xFFFFE08A),
-  Color(0xFFB7E4C7),
-  Color(0xFFA9D6E5),
-  Color(0xFFF4C2C2),
-  Color(0xFFD4C4FB),
-];
-
-class _HomeList extends StatelessWidget {
-  const _HomeList({required this.style, required this.itemCount});
-
-  final _SidebarStyle style;
-  final int itemCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverList.builder(
-      key: const ValueKey('home-list'),
-      itemCount: itemCount,
-      itemBuilder: (context, index) {
-        final title = 'Item $index';
-        final detail =
-            'The quick brown fox jumps over the lazy dog. '
-            'This longer row is here so color and text can be seen sliding '
-            'under the bar.';
-        final color = index % 6 == 0
-            ? _homeItemColors[(index ~/ 6) % _homeItemColors.length]
-            : null;
-        if (style == _SidebarStyle.cupertino) {
-          return CupertinoListTile(
-            backgroundColor: color,
-            title: Text(title),
-            subtitle: Text(detail),
-          );
-        }
-        return ListTile(
-          tileColor: color,
-          title: Text(title),
-          subtitle: Text(detail),
-        );
-      },
-    );
-  }
-}
-
-class _SettingsPage extends StatelessWidget {
-  const _SettingsPage({
-    required this.style,
-    required this.settings,
-    required this.mode,
-    required this.onModeChanged,
-    required this.collapsedBarTransition,
-    required this.onCollapsedBarTransitionChanged,
-    required this.collapsedBarSize,
-    required this.onCollapsedBarSizeChanged,
-    required this.collapsedBarSeparator,
-    required this.onCollapsedBarSeparatorChanged,
-    required this.onPreferredWidthChanged,
-    required this.onMinimumWidthChanged,
-    required this.onMaximumWidthChanged,
-    required this.onCollapsedExtentChanged,
-    required this.onAutomaticExpandedWidthChanged,
-    required this.onCustomDragHandleChanged,
-    required this.onCustomTooltipChanged,
-    required this.onCustomLabelsChanged,
-    required this.onCustomContentChanged,
-  });
-
-  final _SidebarStyle style;
-  final _SettingsValues settings;
-  final _ExpansionMode mode;
-  final ValueChanged<_ExpansionMode> onModeChanged;
-  final _CollapsedBarTransition collapsedBarTransition;
-  final ValueChanged<_CollapsedBarTransition> onCollapsedBarTransitionChanged;
-  final _CollapsedBarSize collapsedBarSize;
-  final ValueChanged<_CollapsedBarSize> onCollapsedBarSizeChanged;
-  final bool collapsedBarSeparator;
-  final ValueChanged<bool> onCollapsedBarSeparatorChanged;
-  final ValueChanged<double> onPreferredWidthChanged;
-  final ValueChanged<double> onMinimumWidthChanged;
-  final ValueChanged<double> onMaximumWidthChanged;
-  final ValueChanged<double> onCollapsedExtentChanged;
-  final ValueChanged<double> onAutomaticExpandedWidthChanged;
-  final ValueChanged<bool> onCustomDragHandleChanged;
-  final ValueChanged<bool> onCustomTooltipChanged;
-  final ValueChanged<bool> onCustomLabelsChanged;
-  final ValueChanged<bool> onCustomContentChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverList(
-      key: const ValueKey('sidebar-settings'),
-      delegate: SliverChildListDelegate([
-        _ExpansionControls(style: style, mode: mode, onChanged: onModeChanged),
-        if (style == _SidebarStyle.cupertino) ...[
-          _TransitionControls(
-            transition: collapsedBarTransition,
-            onChanged: onCollapsedBarTransitionChanged,
-          ),
-          _BarSizeControls(
-            size: collapsedBarSize,
-            onChanged: onCollapsedBarSizeChanged,
-          ),
-          _SwitchControl(
-            style: style,
-            label: 'Bar separator',
-            value: collapsedBarSeparator,
-            onChanged: onCollapsedBarSeparatorChanged,
-          ),
-        ],
-        _WidthControl(
-          style: style,
-          label: 'Preferred width',
-          value: settings.preferredWidth,
-          min: settings.minimumWidth,
-          max: settings.maximumWidth,
-          onChanged: onPreferredWidthChanged,
-        ),
-        _WidthControl(
-          style: style,
-          label: 'Minimum width',
-          value: settings.minimumWidth,
-          min: 120,
-          max: settings.maximumWidth,
-          onChanged: onMinimumWidthChanged,
-        ),
-        _WidthControl(
-          style: style,
-          label: 'Maximum width',
-          value: settings.maximumWidth,
-          min: settings.minimumWidth,
-          max: 480,
-          onChanged: onMaximumWidthChanged,
-        ),
-        _WidthControl(
-          style: style,
-          label: 'Collapsed rail width',
-          value: settings.collapsedExtent,
-          min: 72,
-          max: 140,
-          onChanged: onCollapsedExtentChanged,
-        ),
-        _WidthControl(
-          style: style,
-          label: 'Auto width',
-          value: settings.automaticExpandedWidth,
-          min: 480,
-          max: 1400,
-          onChanged: onAutomaticExpandedWidthChanged,
-        ),
-        _SwitchControl(
-          style: style,
-          label: 'Custom resize handle',
-          value: settings.customDragHandle,
-          onChanged: onCustomDragHandleChanged,
-        ),
-        _SwitchControl(
-          style: style,
-          label: 'Custom tooltip',
-          value: settings.customTooltip,
-          onChanged: onCustomTooltipChanged,
-        ),
-        _SwitchControl(
-          style: style,
-          label: 'Custom show and hide labels',
-          value: settings.customLabels,
-          onChanged: onCustomLabelsChanged,
-        ),
-        _SwitchControl(
-          style: style,
-          label: 'Custom sidebar content',
-          value: settings.customContent,
-          onChanged: onCustomContentChanged,
-        ),
-      ]),
-    );
-  }
-}
-
-class _WidthControl extends StatelessWidget {
-  const _WidthControl({
-    required this.style,
-    required this.label,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.onChanged,
-  });
-
-  final _SidebarStyle style;
-  final String label;
-  final double value;
-  final double min;
-  final double max;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final rounded = value.round().toString();
-    final sliderValue = value.clamp(min, max);
-    if (style == _SidebarStyle.cupertino) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('$label  $rounded'),
-            CupertinoSlider(
-              value: sliderValue,
-              min: min,
-              max: max,
-              onChanged: min >= max ? null : onChanged,
-            ),
-          ],
-        ),
-      );
-    }
-    return ListTile(
-      title: Text(label),
-      subtitle: Slider(
-        value: sliderValue,
-        min: min,
-        max: max,
-        label: rounded,
-        onChanged: min >= max ? null : onChanged,
-      ),
-      trailing: Text(rounded),
-    );
-  }
-}
-
-class _SwitchControl extends StatelessWidget {
-  const _SwitchControl({
-    required this.style,
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final _SidebarStyle style;
-  final String label;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    if (style == _SidebarStyle.cupertino) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        child: Row(
-          children: [
-            Expanded(child: Text(label)),
-            CupertinoSwitch(value: value, onChanged: onChanged),
-          ],
-        ),
-      );
-    }
-    return SwitchListTile(
-      title: Text(label),
-      value: value,
-      onChanged: onChanged,
+    return Directionality(
+      textDirection: _textDirection,
+      child: _ExampleBackground(child: page),
     );
   }
 }

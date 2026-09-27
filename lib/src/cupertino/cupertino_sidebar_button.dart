@@ -13,6 +13,7 @@ class CupertinoSidebarButton extends StatelessWidget {
     required this.buttonKey,
     this.tooltipBuilder,
     this.extent = kMinInteractiveDimensionCupertino,
+    this.iconSize,
   });
 
   /// Focus node owned by the sidebar host.
@@ -33,6 +34,9 @@ class CupertinoSidebarButton extends StatelessWidget {
   /// Square size of the button. The collapsed capsule passes its height.
   final double extent;
 
+  /// Glyph size. Null uses the button's icon theme.
+  final double? iconSize;
+
   @override
   Widget build(BuildContext context) {
     final direction = Directionality.of(context);
@@ -50,6 +54,7 @@ class CupertinoSidebarButton extends StatelessWidget {
           direction == TextDirection.ltr
               ? CupertinoIcons.sidebar_left
               : CupertinoIcons.sidebar_right,
+          size: iconSize,
         ),
       ),
     );

@@ -3,6 +3,8 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 
 import '../adaptive_navigation_destination.dart';
+import 'material_sidebar_item_style.dart';
+import 'material_sidebar_metrics.dart';
 
 /// A Material 3 wide-navigation-rail destination button.
 ///
@@ -13,17 +15,17 @@ import '../adaptive_navigation_destination.dart';
 /// +----+         +--------------+
 /// ```
 class MaterialWideNavigationRailButton extends StatelessWidget {
-  /// Creates a rail destination button that follows [animation].
+  /// Creates a rail destination button.
+  ///
+  /// The button reads its width and expand animation from the enclosing
+  /// [MaterialSidebar]. [itemStyle] replaces the indicator, the label colors,
+  /// and the label type.
   const MaterialWideNavigationRailButton({
     super.key,
-    required this.slotKey,
-    required this.buttonKey,
-    required this.animation,
-    required this.collapsedRailWidth,
-    required this.expandedRailWidth,
     required this.destination,
     required this.selected,
     required this.onPressed,
+    this.itemStyle,
   });
 
   static const double _collapsedSlotHeight = 64.0;
@@ -37,21 +39,6 @@ class MaterialWideNavigationRailButton extends StatelessWidget {
   static const double _expandedContentInset = 16.0;
   static const double _expandedIconLabelSpacing = 8.0;
 
-  /// Key of the slot that owns the button's animated size.
-  final Key slotKey;
-
-  /// Key of the button itself.
-  final Key buttonKey;
-
-  /// Collapsed-to-expanded progress, where 0 is collapsed and 1 is expanded.
-  final Animation<double> animation;
-
-  /// Width of the collapsed rail.
-  final double collapsedRailWidth;
-
-  /// Width of the expanded rail.
-  final double expandedRailWidth;
-
   /// Destination rendered by this button.
   final AdaptiveNavigationDestination destination;
 
@@ -61,20 +48,25 @@ class MaterialWideNavigationRailButton extends StatelessWidget {
   /// Called when the button is pressed.
   final VoidCallback onPressed;
 
+  /// Indicator, label colors, and label type. Null keeps the rail theme.
+  final MaterialSidebarItemStyle? itemStyle;
+
   @override
   Widget build(BuildContext context) {
+    final metrics = MaterialSidebarMetrics.of(context);
+    final animation = NavigationRail.extendedAnimation(context);
     return AnimatedBuilder(
       animation: animation,
       builder: (context, _) {
         final progress = animation.value;
         final slotWidth = lerpDouble(
-          collapsedRailWidth,
-          expandedRailWidth,
+          metrics.collapsedWidth,
+          metrics.expandedWidth,
           progress,
         )!;
         final buttonWidth = lerpDouble(
           _collapsedButtonWidth,
-          expandedRailWidth - _expandedHorizontalMargin * 2,
+          metrics.expandedWidth - _expandedHorizontalMargin * 2,
           progress,
         )!;
         final buttonHeight = lerpDouble(
@@ -89,7 +81,6 @@ class MaterialWideNavigationRailButton extends StatelessWidget {
           progress,
         )!;
         return SizedBox(
-          key: slotKey,
           width: slotWidth,
           height: slotHeight,
           child: Stack(
@@ -100,10 +91,10 @@ class MaterialWideNavigationRailButton extends StatelessWidget {
                 width: buttonWidth,
                 height: buttonHeight,
                 child: _MaterialWideNavigationRailButtonSurface(
-                  buttonKey: buttonKey,
                   destination: destination,
                   selected: selected,
                   progress: progress,
+                  itemStyle: itemStyle,
                   onPressed: onPressed,
                 ),
               ),
@@ -119,6 +110,7 @@ class MaterialWideNavigationRailButton extends StatelessWidget {
                       destination: destination,
                       selected: selected,
                       expanded: false,
+                      itemStyle: itemStyle,
                     ),
                   ),
                 ),
@@ -138,6 +130,7 @@ class MaterialWideNavigationRailButton extends StatelessWidget {
           context,
           selected: selected,
           expanded: false,
+          itemStyle: itemStyle,
         ),
       ),
       maxLines: 2,
@@ -158,17 +151,17 @@ class MaterialWideNavigationRailButton extends StatelessWidget {
 
 class _MaterialWideNavigationRailButtonSurface extends StatelessWidget {
   const _MaterialWideNavigationRailButtonSurface({
-    required this.buttonKey,
     required this.destination,
     required this.selected,
     required this.progress,
+    required this.itemStyle,
     required this.onPressed,
   });
 
-  final Key buttonKey;
   final AdaptiveNavigationDestination destination;
   final bool selected;
   final double progress;
+  final MaterialSidebarItemStyle? itemStyle;
   final VoidCallback onPressed;
 
   @override
@@ -188,8 +181,10 @@ class _MaterialWideNavigationRailButtonSurface extends StatelessWidget {
           color: colorScheme.onSurfaceVariant,
           size: MaterialWideNavigationRailButton._iconSize,
         );
-    final indicatorColor =
-        railTheme.indicatorColor ?? colorScheme.secondaryContainer;
+    final indicatorColor = MaterialSidebarItemStyle.selectedColorOf(
+      itemStyle,
+      railTheme.indicatorColor ?? colorScheme.secondaryContainer,
+    );
     final indicatorShape = railTheme.indicatorShape ?? const StadiumBorder();
     final iconStart = lerpDouble(
       (MaterialWideNavigationRailButton._collapsedButtonWidth -
@@ -207,7 +202,6 @@ class _MaterialWideNavigationRailButtonSurface extends StatelessWidget {
       excludeSemantics: true,
       onTap: onPressed,
       child: TextButton(
-        key: buttonKey,
         onPressed: onPressed,
         style: const ButtonStyle(
           padding: WidgetStatePropertyAll(EdgeInsets.zero),
@@ -230,8 +224,14 @@ class _MaterialWideNavigationRailButtonSurface extends StatelessWidget {
               child: _MaterialWideNavigationRailIcon(
                 destination: destination,
                 selected: selected,
-                selectedTheme: selectedIconTheme,
-                unselectedTheme: unselectedIconTheme,
+                selectedTheme: _iconTheme(
+                  selectedIconTheme,
+                  itemStyle?.selectedForegroundColor,
+                ),
+                unselectedTheme: _iconTheme(
+                  unselectedIconTheme,
+                  itemStyle?.foregroundColor,
+                ),
               ),
             ),
             PositionedDirectional(
@@ -251,6 +251,7 @@ class _MaterialWideNavigationRailButtonSurface extends StatelessWidget {
                     destination: destination,
                     selected: selected,
                     expanded: true,
+                    itemStyle: itemStyle,
                   ),
                 ),
               ),
@@ -329,11 +330,13 @@ class _MaterialWideNavigationRailLabel extends StatelessWidget {
     required this.destination,
     required this.selected,
     required this.expanded,
+    required this.itemStyle,
   });
 
   final AdaptiveNavigationDestination destination;
   final bool selected;
   final bool expanded;
+  final MaterialSidebarItemStyle? itemStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -346,30 +349,41 @@ class _MaterialWideNavigationRailLabel extends StatelessWidget {
         context,
         selected: selected,
         expanded: expanded,
+        itemStyle: itemStyle,
       ),
     );
   }
+}
+
+IconThemeData _iconTheme(IconThemeData theme, Color? color) {
+  if (color == null) return theme;
+  return theme.copyWith(color: color);
 }
 
 TextStyle _materialRailLabelStyle(
   BuildContext context, {
   required bool selected,
   required bool expanded,
+  MaterialSidebarItemStyle? itemStyle,
 }) {
   final theme = Theme.of(context);
   final railTheme = NavigationRailTheme.of(context);
   final baseStyle = expanded
       ? theme.textTheme.labelLarge
       : theme.textTheme.labelMedium;
-  return (baseStyle ?? const TextStyle())
-      .merge(
-        selected
-            ? railTheme.selectedLabelTextStyle
-            : railTheme.unselectedLabelTextStyle,
-      )
-      .copyWith(
-        color: selected
-            ? theme.colorScheme.secondary
-            : theme.colorScheme.onSurfaceVariant,
-      );
+  final fallback = (baseStyle ?? const TextStyle()).merge(
+    selected
+        ? railTheme.selectedLabelTextStyle
+        : railTheme.unselectedLabelTextStyle,
+  );
+  return MaterialSidebarItemStyle.labelStyleOf(
+    itemStyle,
+    fallback: fallback,
+    color: MaterialSidebarItemStyle.foregroundOf(
+      itemStyle,
+      selected: selected,
+      selectedFallback: theme.colorScheme.secondary,
+      unselectedFallback: theme.colorScheme.onSurfaceVariant,
+    ),
+  );
 }

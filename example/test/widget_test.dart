@@ -1,10 +1,106 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
 import 'package:flutter_adaptive_sidebar_example/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('Cupertino example uses the 54pt sidebar navigation row', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: true));
+    await tester.pumpAndSettle();
+
+    final navigationBar = tester.widget<CupertinoNavigationBar>(
+      find.byType(CupertinoNavigationBar).first,
+    );
+    expect(navigationBar.preferredSize.height, 54);
+  });
+
+  testWidgets(
+    'Cupertino top inset exposes safe area and supports iOS offsets',
+    (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1;
+      tester.view.padding = const FakeViewPadding(top: 59);
+      tester.view.viewPadding = const FakeViewPadding(top: 59);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+
+      await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: true));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('cupertino-sidebar-auxiliary-destination-0')),
+      );
+      await tester.pumpAndSettle();
+
+      final control = find.byKey(const ValueKey('toolbar-top-inset-control'));
+      await Scrollable.ensureVisible(tester.element(control), alignment: 0.5);
+      CupertinoSidebar sidebar() =>
+          tester.widget<CupertinoSidebar>(find.byType(CupertinoSidebar));
+      final togglePosition = find.byKey(
+        const ValueKey('cupertino-sidebar-toggle-position'),
+      );
+
+      expect(
+        sidebar().toolbarGeometry,
+        CupertinoSidebarToolbarGeometry.standard,
+      );
+      expect(tester.getTopLeft(togglePosition).dy, 59);
+
+      await tester.tap(find.text('Unified'));
+      await tester.pumpAndSettle();
+      expect(sidebar().toolbarGeometry.topInset, 10);
+      expect(tester.getTopLeft(togglePosition).dy, 59);
+      expect(sidebar().toolbarGeometry.height, 54);
+      expect(sidebar().toolbarGeometry.collapsedBarHeight, 44);
+      expect(
+        tester
+            .widget<CupertinoNavigationBar>(
+              find.byType(CupertinoNavigationBar).first,
+            )
+            .preferredSize
+            .height,
+        54,
+      );
+
+      await Scrollable.ensureVisible(tester.element(control), alignment: 0.5);
+      await tester.tap(find.text('Custom'));
+      await tester.pumpAndSettle();
+      final slider = find.byKey(const ValueKey('toolbar-top-inset-slider'));
+      expect(find.text('Configured 10 · Safe area 59'), findsOneWidget);
+      expect(tester.widget<CupertinoSlider>(slider).max, 96);
+      expect(tester.widget<CupertinoSlider>(slider).divisions, 96);
+      tester.widget<CupertinoSlider>(slider).onChanged?.call(72);
+      await tester.pumpAndSettle();
+      expect(find.text('Configured 72 · Safe area 59'), findsOneWidget);
+      expect(sidebar().toolbarGeometry.topInset, 72);
+      expect(tester.getTopLeft(togglePosition).dy, 72);
+      expect(sidebar().toolbarGeometry.height, 54);
+      expect(sidebar().toolbarGeometry.collapsedBarHeight, 44);
+
+      await Scrollable.ensureVisible(tester.element(control), alignment: 0.5);
+      await tester.tap(
+        find.descendant(of: control, matching: find.text('Auto')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        sidebar().toolbarGeometry,
+        CupertinoSidebarToolbarGeometry.standard,
+      );
+      expect(slider, findsNothing);
+    },
+  );
+
   testWidgets('style and presence controls keep the selected destination', (
     tester,
   ) async {
@@ -18,7 +114,7 @@ void main() {
 
     final styleButton = tester.getTopLeft(find.byTooltip('Use Cupertino'));
     final title = tester.getTopLeft(find.text('Adaptive sidebar'));
-    expect(styleButton.dx, lessThan(title.dx));
+    expect(styleButton.dx, greaterThan(title.dx));
 
     expect(find.text('Home'), findsWidgets);
     expect(find.byKey(const ValueKey('rail-panel')), findsOneWidget);
@@ -77,13 +173,19 @@ void main() {
       find.byKey(const ValueKey('cupertino-sidebar-auxiliary-destination-0')),
     );
     await tester.pumpAndSettle();
+    final expansionControl = find.byKey(const ValueKey('expansion-control'));
     final segmentStyle = DefaultTextStyle.of(
-      tester.element(find.text('Auto')),
+      tester.element(
+        find.descendant(of: expansionControl, matching: find.text('Auto')),
+      ),
     ).style;
     expect(segmentStyle.decoration, TextDecoration.none);
     expect(segmentStyle.fontFamily, 'CupertinoSystemText');
 
-    await tester.ensureVisible(find.text('Coll'));
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Coll')),
+      alignment: 0.5,
+    );
     await tester.tap(find.text('Coll'));
     await tester.pumpAndSettle();
     expect(
@@ -93,7 +195,10 @@ void main() {
     expect(find.byKey(const ValueKey('cupertino-sidebar-panel')), findsNothing);
     expect(find.text('Search'), findsWidgets);
 
-    await tester.ensureVisible(find.text('Expand'));
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Expand')),
+      alignment: 0.5,
+    );
     await tester.tap(find.text('Expand'));
     await tester.pumpAndSettle();
     expect(
@@ -154,12 +259,20 @@ void main() {
     expect(tester.getSize(find.byKey(const ValueKey('rail-panel'))).width, 96);
 
     await tester.tap(
-      find.byKey(const ValueKey('material-rail-auxiliary-destination-0')),
+      find.descendant(
+        of: find.byKey(const ValueKey('material-rail-auxiliary-destination-0')),
+        matching: find.byType(TextButton),
+      ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Expand'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Auto'));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('expansion-control')),
+        matching: find.text('Auto'),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byKey(const ValueKey('rail-panel'))).width,
@@ -188,8 +301,24 @@ void main() {
 
     await tester.tap(find.byTooltip('Appearance'));
     await tester.pumpAndSettle();
+    final lightBackground = tester.widget<DecoratedBox>(
+      find.byKey(const ValueKey('example-background')),
+    );
+    final lightGradient =
+        (lightBackground.decoration as BoxDecoration).gradient!
+            as LinearGradient;
+    expect(lightGradient.begin, Alignment.centerLeft);
+    expect(lightGradient.end, Alignment.centerRight);
+
     await tester.tap(find.byTooltip('Appearance'));
     await tester.pumpAndSettle();
+    final darkBackground = tester.widget<DecoratedBox>(
+      find.byKey(const ValueKey('example-background')),
+    );
+    final darkGradient =
+        (darkBackground.decoration as BoxDecoration).gradient!
+            as LinearGradient;
+    expect(darkGradient.colors, isNot(lightGradient.colors));
 
     final settingsContext = tester.element(find.text('Preferred width'));
     expect(Theme.of(settingsContext).brightness, Brightness.dark);
@@ -263,14 +392,22 @@ void main() {
     expect(find.text('Today'), findsOneWidget);
     expect(find.text('3 due'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Coll'));
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Coll')),
+      alignment: 0.5,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Coll'));
     await tester.pumpAndSettle();
     expect(find.text('Today'), findsNothing);
     expect(find.text('3 due'), findsNothing);
     expect(find.byKey(const ValueKey('custom-sidebar-lists')), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Expand'));
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Expand')),
+      alignment: 0.5,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Expand'));
     await tester.pumpAndSettle();
     expect(find.text('Today'), findsOneWidget);
@@ -297,6 +434,36 @@ void main() {
     expect(listsStyle.decoration, TextDecoration.none);
     expect(listsStyle.fontFamily, 'CupertinoSystemText');
     expect(listsStyle.color, isNot(const Color(0xD0FF0000)));
+
+    await tester.tap(
+      find.byKey(const ValueKey('custom-sidebar-destination-0')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Item 0'), findsOneWidget);
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    final note = find.byKey(const ValueKey('custom-sidebar-note'));
+    final noteText = find.descendant(of: note, matching: find.text('Note'));
+    var reachedNote = false;
+    for (var index = 0; index < 20; index += 1) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      if (Focus.of(tester.element(noteText)).hasFocus) {
+        reachedNote = true;
+        break;
+      }
+    }
+    expect(reachedNote, isTrue);
+    final noteDecoration = tester
+        .widget<DecoratedBox>(
+          find.descendant(of: note, matching: find.byType(DecoratedBox)),
+        )
+        .decoration;
+    expect((noteDecoration as BoxDecoration).border, isNotNull);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(Center, 'Note'), findsOneWidget);
   });
 
   testWidgets('auto width setting changes when the sidebar collapses', (
@@ -345,7 +512,7 @@ void main() {
     );
   });
 
-  testWidgets('cupertino app bar blurs once content scrolls under it', (
+  testWidgets('cupertino app bar keeps blurring the gradient while scrolling', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1200, 800);
@@ -356,20 +523,20 @@ void main() {
     await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: true));
     await tester.pumpAndSettle();
 
-    final bar = find.byType(CupertinoSliverNavigationBar);
+    final bar = find.byType(CupertinoNavigationBar);
     BackdropFilter barBlur() {
       return tester.widget<BackdropFilter>(
         find.descendant(of: bar, matching: find.byType(BackdropFilter)),
       );
     }
 
-    expect(barBlur().enabled, isFalse);
+    expect(barBlur().enabled, isTrue);
 
     await tester.drag(find.text('Item 0'), const Offset(0, -400));
     await tester.pumpAndSettle();
 
     expect(barBlur().enabled, isTrue);
-    final navigationBar = tester.widget<CupertinoSliverNavigationBar>(bar);
+    final navigationBar = tester.widget<CupertinoNavigationBar>(bar);
     final scaffoldColor = CupertinoTheme.of(
       tester.element(bar),
     ).scaffoldBackgroundColor;
@@ -415,6 +582,140 @@ void main() {
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
+  });
+
+  testWidgets('collapsed bar placement switches between anchored and fixed', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: true));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('cupertino-sidebar-auxiliary-destination-0')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Coll'));
+    await tester.tap(find.text('Coll'));
+    await tester.pumpAndSettle();
+
+    final placementControl = find.byKey(
+      const ValueKey('collapsed-bar-placement-control'),
+    );
+    await tester.ensureVisible(placementControl);
+    final segmented = find.descendant(
+      of: placementControl,
+      matching: find.byType(
+        CupertinoSlidingSegmentedControl<CupertinoSidebarCollapsedBarPlacement>,
+      ),
+    );
+    expect(
+      tester
+          .widget<CupertinoSidebar>(find.byType(CupertinoSidebar))
+          .collapsedBarPlacement,
+      CupertinoSidebarCollapsedBarPlacement.toolbarAnchor,
+    );
+
+    tester
+        .widget<
+          CupertinoSlidingSegmentedControl<
+            CupertinoSidebarCollapsedBarPlacement
+          >
+        >(segmented)
+        .onValueChanged(CupertinoSidebarCollapsedBarPlacement.fixedToolbar);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<CupertinoSidebar>(find.byType(CupertinoSidebar))
+          .collapsedBarPlacement,
+      CupertinoSidebarCollapsedBarPlacement.fixedToolbar,
+    );
+
+    expect(
+      find.byKey(const ValueKey('cupertino-sidebar-fixed-toolbar-host')),
+      findsOneWidget,
+    );
+    expect(find.byType(CompositedTransformFollower), findsNothing);
+    expect(find.byType(CompositedTransformTarget), findsNothing);
+
+    final capsule = find.byKey(
+      const ValueKey('cupertino-sidebar-collapsed-capsule'),
+    );
+    final capsuleElement = tester.element(capsule);
+    final fixedCenter = tester.getCenter(capsule);
+    await tester.tap(
+      find.byKey(const ValueKey('collapsed-bar-placement-demo-button')),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(tester.element(capsule), same(capsuleElement));
+    expect(tester.getCenter(capsule), fixedCenter);
+    await tester.pumpAndSettle();
+    expect(tester.getCenter(capsule), fixedCenter);
+    expect(find.textContaining('Fixed toolbar is active'), findsOneWidget);
+    expect(
+      tester
+          .getCenter(
+            find.byKey(const ValueKey('collapsed-bar-placement-demo-title')),
+          )
+          .dx,
+      lessThan(tester.view.physicalSize.width / 2),
+    );
+    final demoDescription = find.byKey(
+      const ValueKey('collapsed-bar-placement-demo-description'),
+    );
+    final demoTextStyle = DefaultTextStyle.of(
+      tester.element(demoDescription),
+    ).style;
+    expect(demoTextStyle.decoration, TextDecoration.none);
+    expect(demoTextStyle.fontFamily, 'CupertinoSystemText');
+
+    Navigator.of(tester.element(demoDescription)).pop();
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(placementControl);
+    tester
+        .widget<
+          CupertinoSlidingSegmentedControl<
+            CupertinoSidebarCollapsedBarPlacement
+          >
+        >(segmented)
+        .onValueChanged(CupertinoSidebarCollapsedBarPlacement.toolbarAnchor);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('cupertino-sidebar-fixed-toolbar-host')),
+      findsNothing,
+    );
+    expect(find.byType(CompositedTransformFollower), findsOneWidget);
+    expect(find.byType(CompositedTransformTarget), findsOneWidget);
+
+    final anchoredElement = tester.element(capsule);
+    final anchoredCenter = tester.getCenter(capsule);
+    await tester.tap(
+      find.byKey(const ValueKey('collapsed-bar-placement-demo-button')),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(tester.element(capsule), same(anchoredElement));
+    expect(tester.getCenter(capsule), isNot(anchoredCenter));
+    expect(find.byType(CompositedTransformTarget), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Toolbar anchor is active'), findsOneWidget);
+
+    Navigator.of(
+      tester.element(
+        find.byKey(const ValueKey('collapsed-bar-placement-demo-description')),
+      ),
+    ).pop();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(find.byType(CompositedTransformTarget), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(tester.getCenter(capsule), anchoredCenter);
   });
 
   testWidgets('collapsed bar clears its selection off the primary page', (

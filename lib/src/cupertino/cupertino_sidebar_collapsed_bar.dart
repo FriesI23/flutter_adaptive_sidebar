@@ -6,18 +6,33 @@ import 'package:flutter/rendering.dart';
 
 import '../adaptive_navigation_destination.dart';
 import 'cupertino_floating_surface.dart';
+import 'cupertino_sidebar_chrome.dart';
+import 'cupertino_sidebar_item_style.dart';
 
 /// Height of the measured collapsed capsule, in logical pixels.
 ///
-/// The reference capsule is 24px tall beside 7px of label ink, which matches
-/// a 36pt control.
-const double kCupertinoSidebarCollapsedBarMeasuredHeight = 36;
+/// Matches the measured iPad floating tab bar while preserving the standard
+/// Cupertino hit area.
+const double kCupertinoSidebarCollapsedBarMeasuredHeight = 44;
+
+const double _kCollapsedBarSelectionHeight = 36;
 
 /// Minimum destination width of the measured collapsed capsule.
 ///
-/// The reference selected segment is 53px wide. At the same scale as
-/// [kCupertinoSidebarCollapsedBarMeasuredHeight], that is 80pt.
+/// Scaled from the reference segment using
+/// [kCupertinoSidebarCollapsedBarMeasuredHeight].
 const double kCupertinoSidebarCollapsedBarMeasuredWidth = 80;
+
+/// Label inside the collapsed capsule.
+///
+/// Uses the measured weight and tracking instead of the default
+/// [CupertinoButton] action style.
+const TextStyle _kCollapsedBarLabelStyle = TextStyle(
+  fontSize: 15,
+  fontWeight: FontWeight.w500,
+  height: 1.2,
+  letterSpacing: -0.23,
+);
 
 /// Horizontal destinations for a collapsed Cupertino sidebar.
 ///
@@ -27,7 +42,8 @@ const double kCupertinoSidebarCollapsedBarMeasuredWidth = 80;
 ///
 /// Press the selection and drag. The highlight follows the pointer. The
 /// selection changes when the pointer is released, and the highlight snaps to
-/// that destination.
+/// that destination. [itemStyle] replaces the highlight, the label colors,
+/// and the label type.
 ///
 /// ```text
 /// selected                 none
@@ -41,7 +57,10 @@ class CupertinoSidebarCollapsedBar extends StatelessWidget {
     required this.destinations,
     required this.selectedIndex,
     required this.onDestinationSelected,
+    this.showIcons = false,
     this.height = kCupertinoSidebarCollapsedBarMeasuredHeight,
+    this.minimumDestinationExtent = kCupertinoSidebarCollapsedBarMeasuredWidth,
+    this.itemStyle,
   }) : assert(destinations.length > 0);
 
   /// Primary destinations shown in the bar.
@@ -56,14 +75,30 @@ class CupertinoSidebarCollapsedBar extends StatelessWidget {
   /// Called with the index of a tapped destination.
   final ValueChanged<int> onDestinationSelected;
 
+  /// Whether each destination draws its Cupertino icon beside the label.
+  ///
+  /// Defaults to false, so the bar shows labels only.
+  final bool showIcons;
+
   /// Height of each destination. Match [CupertinoSidebar.collapsedBarHeight].
   final double height;
 
+  /// Minimum width of each destination.
+  ///
+  /// Defaults to [kCupertinoSidebarCollapsedBarMeasuredWidth], matching the
+  /// measured iPad tab segment while allowing longer labels to grow.
+  final double minimumDestinationExtent;
+
+  /// Highlight, label colors, and label type. Null keeps the measured capsule.
+  final CupertinoSidebarItemStyle? itemStyle;
+
   @override
   Widget build(BuildContext context) {
-    final highlight = CupertinoTheme.of(
-      context,
-    ).primaryColor.withValues(alpha: 0.14);
+    final primaryColor = CupertinoTheme.of(context).primaryColor;
+    final highlight = CupertinoSidebarItemStyle.selectedColorOf(
+      itemStyle,
+      primaryColor.withValues(alpha: 0.14),
+    );
     return _DraggableCollapsedSelection(
       selectedIndex: selectedIndex,
       height: height,
@@ -75,7 +110,10 @@ class CupertinoSidebarCollapsedBar extends StatelessWidget {
             key: ValueKey('cupertino-sidebar-collapsed-destination-$index'),
             destination: destination,
             selected: selectedIndex == index,
+            showIcon: showIcons,
             height: height,
+            minimumExtent: minimumDestinationExtent,
+            itemStyle: itemStyle,
             onPressed: () => onDestinationSelected(index),
           ),
       ],
@@ -88,13 +126,19 @@ class _CollapsedDestination extends StatelessWidget {
     super.key,
     required this.destination,
     required this.selected,
+    required this.showIcon,
     required this.height,
+    required this.minimumExtent,
+    required this.itemStyle,
     required this.onPressed,
   });
 
   final AdaptiveNavigationDestination destination;
   final bool selected;
+  final bool showIcon;
   final double height;
+  final double minimumExtent;
+  final CupertinoSidebarItemStyle? itemStyle;
   final VoidCallback onPressed;
 
   @override
@@ -104,37 +148,51 @@ class _CollapsedDestination extends StatelessWidget {
       CupertinoColors.label,
       context,
     );
-    final foregroundColor = (selected ? primaryColor : labelColor).withValues(
-      alpha: 1,
+    final foregroundColor = CupertinoSidebarItemStyle.foregroundOf(
+      itemStyle,
+      selected: selected,
+      selectedFallback: primaryColor.withValues(alpha: 1),
+      unselectedFallback: labelColor.withValues(alpha: 1),
     );
     final icon = selected
         ? destination.icons.cupertinoSelected
         : destination.icons.cupertino;
-    final innerHeight = math.min(32.0, height);
+    final innerHeight = math.min(_kCollapsedBarSelectionHeight, height);
+    final label = Text(
+      destination.label,
+      maxLines: 1,
+      style: CupertinoSidebarItemStyle.labelStyleOf(
+        itemStyle,
+        fallback: _kCollapsedBarLabelStyle,
+        color: foregroundColor,
+      ),
+    );
     return Semantics(
       container: true,
       button: true,
       selected: selected,
       label: destination.effectiveSemanticsLabel,
       excludeSemantics: true,
-      child: SizedBox(
-        height: height,
-        child: Align(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: CupertinoButton(
-              minimumSize: Size(0, innerHeight),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              borderRadius: BorderRadius.circular(innerHeight / 2),
-              foregroundColor: foregroundColor,
-              onPressed: onPressed,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  icon,
-                  const SizedBox(width: 6),
-                  Text(destination.label, maxLines: 1),
-                ],
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: minimumExtent),
+        child: SizedBox(
+          height: height,
+          child: Align(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: CupertinoButton(
+                minimumSize: Size(0, innerHeight),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                borderRadius: BorderRadius.circular(innerHeight / 2),
+                foregroundColor: foregroundColor,
+                onPressed: onPressed,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (showIcon) ...[icon, const SizedBox(width: 6)],
+                    label,
+                  ],
+                ),
               ),
             ),
           ),
@@ -286,7 +344,7 @@ class _DraggableCollapsedSelectionState
 
   @override
   Widget build(BuildContext context) {
-    final innerHeight = math.min(32.0, widget.height);
+    final innerHeight = math.min(_kCollapsedBarSelectionHeight, widget.height);
     return Listener(
       behavior: HitTestBehavior.translucent,
       onPointerDown: _onPointerDown,
@@ -366,7 +424,7 @@ class _RenderCollapsedSelection extends RenderBox
   });
 
   static const double _horizontalInset = 2;
-  static const double _highlightHeight = 32;
+  static const double _highlightHeight = _kCollapsedBarSelectionHeight;
 
   int? _selectedIndex;
   double? _dragX;
@@ -590,10 +648,14 @@ class CupertinoSidebarCollapsedCapsule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const glass = CupertinoSidebarChrome.liquid;
     return CupertinoFloatingGlassSurface(
       key: const ValueKey('cupertino-sidebar-collapsed-capsule'),
       backgroundColor: backgroundColor,
       borderRadius: BorderRadius.circular(height / 2),
+      blurSigma: glass.blurSigma,
+      boxShadow: glass.boxShadow,
+      border: glass.border.resolve(context),
       child: SizedBox(
         height: height,
         child: Padding(

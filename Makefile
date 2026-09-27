@@ -30,7 +30,7 @@ MACHINE_OUT ?=
 	test-example publish-dry-run check aio
 
 help:
-	@echo "adaptive_actions — automation entrypoints"
+	@echo "flutter_adaptive_sidebar — automation entrypoints"
 	$(BLANK_LINE)
 	@echo "  help          Show this help"
 	@echo "  format        Format package and example Dart sources"

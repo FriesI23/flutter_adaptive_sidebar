@@ -1,13 +1,15 @@
 import 'package:flutter/cupertino.dart';
 
 import '../adaptive_navigation_destination.dart';
+import '../sidebar_destination_selection.dart';
 import 'cupertino_sidebar_destination.dart';
+import 'cupertino_sidebar_item_style.dart';
 
 /// Scrollable Cupertino destinations with a pinned footer.
 ///
-/// Place this in `CupertinoSidebar.content`. A selected auxiliary destination
-/// clears the primary highlight. The footer keeps a separator and bottom safe
-/// area.
+/// Place this in `CupertinoSidebar.content`. [selection] is either a primary
+/// destination, an auxiliary destination, or null when nothing is highlighted.
+/// The footer keeps a separator and bottom safe area.
 ///
 /// ```text
 /// +------------------+
@@ -23,11 +25,10 @@ class CupertinoSidebarNavigation extends StatelessWidget {
   const CupertinoSidebarNavigation({
     super.key,
     required this.destinations,
-    required this.selectedIndex,
-    required this.onDestinationSelected,
+    required this.selection,
+    required this.onSelectionChanged,
     this.auxiliaryDestinations = const [],
-    this.selectedAuxiliaryIndex,
-    this.onAuxiliaryDestinationSelected,
+    this.itemStyle,
   }) : assert(destinations.length > 0);
 
   static const double _toolbarHeight = kMinInteractiveDimensionCupertino;
@@ -36,26 +37,31 @@ class CupertinoSidebarNavigation extends StatelessWidget {
   /// Primary destinations.
   final List<AdaptiveNavigationDestination> destinations;
 
-  /// Selected primary destination.
-  ///
-  /// Ignored while [selectedAuxiliaryIndex] is non-null.
-  final int selectedIndex;
+  /// Selected destination, or null when nothing in either list is highlighted.
+  final SidebarDestinationSelection? selection;
 
-  /// Called with the index of a selected primary destination.
-  final ValueChanged<int> onDestinationSelected;
+  /// Called with the destination the user tapped.
+  final ValueChanged<SidebarDestinationSelection> onSelectionChanged;
 
   /// Destinations pinned below the scrolling list.
   final List<AdaptiveNavigationDestination> auxiliaryDestinations;
 
-  /// Selected auxiliary destination, if any.
-  final int? selectedAuxiliaryIndex;
-
-  /// Called when an auxiliary destination is selected.
-  final ValueChanged<int>? onAuxiliaryDestinationSelected;
+  /// Fill, label colors, and label type for every row.
+  ///
+  /// Null keeps the liquid tint or the edge fill.
+  final CupertinoSidebarItemStyle? itemStyle;
 
   @override
   Widget build(BuildContext context) {
-    final primaryIndex = selectedAuxiliaryIndex == null ? selectedIndex : -1;
+    assert(_selectionInRange(selection, destinations, auxiliaryDestinations));
+    final primaryIndex = switch (selection) {
+      SidebarPrimarySelection(:final index) => index,
+      _ => -1,
+    };
+    final auxiliaryIndex = switch (selection) {
+      SidebarAuxiliarySelection(:final index) => index,
+      _ => -1,
+    };
     return Column(
       children: [
         Expanded(
@@ -70,7 +76,9 @@ class CupertinoSidebarNavigation extends StatelessWidget {
               key: ValueKey('cupertino-sidebar-destination-$index'),
               destination: destinations[index],
               selected: primaryIndex == index,
-              onPressed: () => onDestinationSelected(index),
+              itemStyle: itemStyle,
+              onPressed: () =>
+                  onSelectionChanged(SidebarPrimarySelection(index)),
             ),
           ),
         ),
@@ -99,9 +107,10 @@ class CupertinoSidebarNavigation extends StatelessWidget {
                         'cupertino-sidebar-auxiliary-destination-$index',
                       ),
                       destination: destination,
-                      selected: selectedAuxiliaryIndex == index,
+                      selected: auxiliaryIndex == index,
+                      itemStyle: itemStyle,
                       onPressed: () =>
-                          onAuxiliaryDestinationSelected?.call(index),
+                          onSelectionChanged(SidebarAuxiliarySelection(index)),
                     ),
                 ],
               ),
@@ -111,4 +120,17 @@ class CupertinoSidebarNavigation extends StatelessWidget {
       ],
     );
   }
+}
+
+bool _selectionInRange(
+  SidebarDestinationSelection? selection,
+  List<AdaptiveNavigationDestination> destinations,
+  List<AdaptiveNavigationDestination> auxiliaryDestinations,
+) {
+  return switch (selection) {
+    null => true,
+    SidebarPrimarySelection(:final index) => index < destinations.length,
+    SidebarAuxiliarySelection(:final index) =>
+      index < auxiliaryDestinations.length,
+  };
 }

@@ -58,15 +58,13 @@ Widget sidebarHost({
   required AdaptiveNavigationController controller,
   required bool cupertino,
   NavigationTooltipBuilder? tooltipBuilder,
-  Color? backgroundColor,
+  Color? scaffoldBackgroundColor,
   Widget? content,
+  Widget body = const Text('Body'),
   List<AdaptiveNavigationDestination> destinations = sidebarDestinations,
   List<AdaptiveNavigationDestination> auxiliaryDestinations = const [],
-  int? selectedAuxiliaryIndex,
-  ValueChanged<int>? onDestinationSelected,
-  ValueChanged<int>? onAuxiliaryDestinationSelected,
+  ValueChanged<SidebarDestinationSelection>? onSelectionChanged,
 }) {
-  const body = Text('Body');
   final resolvedContent =
       content ??
       sidebarNavigation(
@@ -74,16 +72,14 @@ Widget sidebarHost({
         cupertino: cupertino,
         destinations: destinations,
         auxiliaryDestinations: auxiliaryDestinations,
-        selectedAuxiliaryIndex: selectedAuxiliaryIndex,
-        onDestinationSelected: onDestinationSelected,
-        onAuxiliaryDestinationSelected: onAuxiliaryDestinationSelected,
+        onSelectionChanged: onSelectionChanged,
       );
   final sidebar = cupertino
       ? CupertinoSidebar(
           controller: controller,
           content: resolvedContent,
           tooltipBuilder: tooltipBuilder,
-          backgroundColor: backgroundColor,
+          scaffoldBackgroundColor: scaffoldBackgroundColor,
           child: body,
         )
       : Row(
@@ -93,7 +89,7 @@ Widget sidebarHost({
               content: resolvedContent,
               tooltipBuilder: tooltipBuilder,
             ),
-            const Expanded(child: body),
+            Expanded(child: body),
           ],
         );
   return CupertinoTheme(data: const CupertinoThemeData(), child: sidebar);
@@ -105,28 +101,22 @@ Widget sidebarNavigation({
   required bool cupertino,
   List<AdaptiveNavigationDestination> destinations = sidebarDestinations,
   List<AdaptiveNavigationDestination> auxiliaryDestinations = const [],
-  int? selectedAuxiliaryIndex,
-  ValueChanged<int>? onDestinationSelected,
-  ValueChanged<int>? onAuxiliaryDestinationSelected,
+  ValueChanged<SidebarDestinationSelection>? onSelectionChanged,
 }) {
-  final select = onDestinationSelected ?? controller.select;
+  final select = onSelectionChanged ?? controller.select;
   if (cupertino) {
     return CupertinoSidebarNavigation(
       destinations: destinations,
-      selectedIndex: controller.selectedIndex,
-      onDestinationSelected: select,
+      selection: controller.selection,
+      onSelectionChanged: select,
       auxiliaryDestinations: auxiliaryDestinations,
-      selectedAuxiliaryIndex: selectedAuxiliaryIndex,
-      onAuxiliaryDestinationSelected: onAuxiliaryDestinationSelected,
     );
   }
   return MaterialSidebarNavigation(
     destinations: destinations,
-    selectedIndex: controller.selectedIndex,
-    onDestinationSelected: select,
+    selection: controller.selection,
+    onSelectionChanged: select,
     auxiliaryDestinations: auxiliaryDestinations,
-    selectedAuxiliaryIndex: selectedAuxiliaryIndex,
-    onAuxiliaryDestinationSelected: onAuxiliaryDestinationSelected,
   );
 }
 
@@ -137,8 +127,9 @@ Future<void> pumpSidebar(
   required bool cupertino,
   bool disableAnimations = false,
   NavigationTooltipBuilder? tooltipBuilder,
-  Color? backgroundColor,
+  Color? scaffoldBackgroundColor,
   Widget? content,
+  Widget body = const Text('Body'),
 }) {
   return tester.pumpWidget(
     MaterialApp(
@@ -153,8 +144,9 @@ Future<void> pumpSidebar(
               controller: controller,
               cupertino: cupertino,
               tooltipBuilder: tooltipBuilder,
-              backgroundColor: backgroundColor,
+              scaffoldBackgroundColor: scaffoldBackgroundColor,
               content: content,
+              body: body,
             ),
           );
         },
@@ -173,14 +165,7 @@ bool destinationSelected(
   if (cupertino) {
     return tester.widget<CupertinoSidebarDestination>(finder).selected;
   }
-  return tester
-      .widget<MaterialWideNavigationRailButton>(
-        find.ancestor(
-          of: finder,
-          matching: find.byType(MaterialWideNavigationRailButton),
-        ),
-      )
-      .selected;
+  return tester.widget<MaterialWideNavigationRailButton>(finder).selected;
 }
 
 /// Host that keeps auxiliary selection outside the navigation controller.
@@ -203,8 +188,6 @@ class SidebarFooterHost extends StatefulWidget {
 }
 
 class _SidebarFooterHostState extends State<SidebarFooterHost> {
-  int? _auxiliaryIndex;
-
   @override
   void initState() {
     super.initState();
@@ -236,14 +219,7 @@ class _SidebarFooterHostState extends State<SidebarFooterHost> {
       cupertino: widget.cupertino,
       destinations: sidebarDestinations.sublist(0, 2),
       auxiliaryDestinations: const [sidebarFooterDestination],
-      selectedAuxiliaryIndex: _auxiliaryIndex,
-      onDestinationSelected: (index) {
-        setState(() => _auxiliaryIndex = null);
-        widget.controller.select(index);
-      },
-      onAuxiliaryDestinationSelected: (index) {
-        setState(() => _auxiliaryIndex = index);
-      },
+      onSelectionChanged: widget.controller.select,
     );
   }
 }

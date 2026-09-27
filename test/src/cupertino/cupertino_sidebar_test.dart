@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
+import 'package:flutter_adaptive_sidebar/src/cupertino/cupertino_sidebar_chrome.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../harness/sidebar_harness.dart';
@@ -16,14 +17,14 @@ void main() {
     await pumpSidebar(tester, controller: controller, cupertino: false);
     await tester.tap(find.byKey(const ValueKey('material-rail-destination-1')));
     await tester.pumpAndSettle();
-    expect(controller.selectedIndex, 1);
+    expect(controller.selection, const SidebarPrimarySelection(1));
 
     controller.expanded = false;
     await tester.pumpAndSettle();
 
     await pumpSidebar(tester, controller: controller, cupertino: true);
     await tester.pumpAndSettle();
-    expect(controller.selectedIndex, 1);
+    expect(controller.selection, const SidebarPrimarySelection(1));
     expect(controller.expanded, isFalse);
     expect(
       find.byKey(const ValueKey('cupertino-sidebar-beside-host')),
@@ -33,9 +34,11 @@ void main() {
 
     controller.expanded = true;
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(CupertinoButton, 'Settings'));
+    await tester.tap(
+      find.widgetWithText(CupertinoSidebarDestination, 'Settings'),
+    );
     await tester.pumpAndSettle();
-    expect(controller.selectedIndex, 2);
+    expect(controller.selection, const SidebarPrimarySelection(2));
     expect(controller.expanded, isTrue);
   });
 
@@ -131,7 +134,7 @@ void main() {
         home: sidebarHost(
           controller: controller,
           cupertino: true,
-          backgroundColor: custom,
+          scaffoldBackgroundColor: custom,
         ),
       ),
     );
@@ -154,7 +157,7 @@ void main() {
     ).barBackgroundColor;
     expect(
       surfaceColor.color,
-      barColor.withValues(alpha: kCupertinoSidebarGlassAlpha),
+      barColor.withValues(alpha: CupertinoSidebarChrome.liquid.fill.alpha),
     );
     final customPage = tester.element(find.text('Body'));
     expect(CupertinoTheme.of(customPage).scaffoldBackgroundColor, custom);
@@ -234,6 +237,12 @@ void main() {
     controller.expanded = false;
     await tester.pumpAndSettle();
 
+    expect(find.byType(CompositedTransformFollower), findsOneWidget);
+    expect(find.byType(CompositedTransformTarget), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('cupertino-sidebar-fixed-toolbar-host')),
+      findsNothing,
+    );
     expect(find.byKey(const ValueKey('cupertino-sidebar-panel')), findsNothing);
     expect(
       find.byKey(const ValueKey('cupertino-sidebar-toggle-position')),
@@ -278,7 +287,7 @@ void main() {
       find.byKey(const ValueKey('cupertino-sidebar-collapsed-destination-1')),
     );
     await tester.pumpAndSettle();
-    expect(controller.selectedIndex, 1);
+    expect(controller.selection, const SidebarPrimarySelection(1));
 
     await tester.tap(find.byKey(const ValueKey('cupertino-sidebar-toggle')));
     await tester.pumpAndSettle();
@@ -295,6 +304,150 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  testWidgets(
+    'fixed collapsed bar overlays the toolbar and uses a placeholder',
+    (tester) async {
+      useLargeTestWindow(tester);
+      tester.view.padding = const FakeViewPadding(top: 20);
+      tester.view.viewPadding = const FakeViewPadding(top: 20);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      final controller = AdaptiveNavigationController(initialExpanded: false);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        collapsedBarHost(
+          controller: controller,
+          collapsedBarPlacement:
+              CupertinoSidebarCollapsedBarPlacement.fixedToolbar,
+          collapsedBarHeight: 30,
+          textDirection: TextDirection.rtl,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final capsule = find.byKey(
+        const ValueKey('cupertino-sidebar-collapsed-capsule'),
+      );
+      final fixedHost = find.byKey(
+        const ValueKey('cupertino-sidebar-fixed-toolbar-host'),
+      );
+      final placeholder = find.byKey(
+        const ValueKey('cupertino-sidebar-fixed-toolbar-placeholder'),
+      );
+      expect(fixedHost, findsOneWidget);
+      expect(capsule, findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('cupertino-sidebar-toggle')),
+        findsOneWidget,
+      );
+      expect(find.byType(CompositedTransformFollower), findsNothing);
+      expect(find.byType(CompositedTransformTarget), findsNothing);
+      expect(tester.getSize(fixedHost).height, 44);
+      expect(tester.getSize(placeholder), tester.getSize(capsule));
+      expect(tester.getCenter(capsule), tester.getCenter(fixedHost));
+      expect(tester.getCenter(capsule).dy, 42);
+      expect(_pointerIgnored(tester, find.text('Title')), isTrue);
+
+      controller.expanded = true;
+      await tester.pumpAndSettle();
+
+      expect(_pointerIgnored(tester, find.text('Title')), isFalse);
+      expect(_pointerIgnored(tester, capsule), isTrue);
+    },
+  );
+
+  testWidgets('fixed collapsed bar centers in an LTR edge toolbar', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController(initialExpanded: false);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      collapsedBarHost(
+        controller: controller,
+        collapsedBarPlacement:
+            CupertinoSidebarCollapsedBarPlacement.fixedToolbar,
+        collapsedBarHeight: 28,
+        style: CupertinoSidebarStyle.liquidEdge,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final capsule = find.byKey(
+      const ValueKey('cupertino-sidebar-collapsed-capsule'),
+    );
+    final fixedHost = find.byKey(
+      const ValueKey('cupertino-sidebar-fixed-toolbar-host'),
+    );
+    final placeholder = find.byKey(
+      const ValueKey('cupertino-sidebar-fixed-toolbar-placeholder'),
+    );
+    expect(find.byType(CompositedTransformFollower), findsNothing);
+    expect(find.byType(CompositedTransformTarget), findsNothing);
+    expect(tester.getSize(placeholder), tester.getSize(capsule));
+    expect(tester.getCenter(capsule), tester.getCenter(fixedHost));
+    expect(tester.getCenter(capsule).dy, 22);
+  });
+
+  testWidgets('compact geometry keeps the edge toolbar top inset', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController(initialExpanded: false);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      collapsedBarHost(
+        controller: controller,
+        collapsedBarPlacement:
+            CupertinoSidebarCollapsedBarPlacement.fixedToolbar,
+        style: CupertinoSidebarStyle.liquidEdge,
+        toolbarGeometry: CupertinoSidebarToolbarGeometry.compact,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final fixedHost = find.byKey(
+      const ValueKey('cupertino-sidebar-fixed-toolbar-host'),
+    );
+    expect(tester.getTopLeft(fixedHost).dy, 10);
+    expect(tester.getSize(fixedHost).height, 44);
+  });
+
+  testWidgets('custom toolbar geometry controls the fixed toolbar host', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController(initialExpanded: false);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      collapsedBarHost(
+        controller: controller,
+        collapsedBarPlacement:
+            CupertinoSidebarCollapsedBarPlacement.fixedToolbar,
+        toolbarGeometry: const CupertinoSidebarToolbarGeometry(
+          contentHeight: 40,
+          collapsedBarHeight: 28,
+          height: 44,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final capsule = find.byKey(
+      const ValueKey('cupertino-sidebar-collapsed-capsule'),
+    );
+    final fixedHost = find.byKey(
+      const ValueKey('cupertino-sidebar-fixed-toolbar-host'),
+    );
+    expect(tester.getSize(fixedHost).height, 40);
+    expect(tester.getSize(capsule).height, 28);
+    expect(tester.getCenter(capsule), tester.getCenter(fixedHost));
   });
 
   testWidgets(
@@ -480,6 +633,61 @@ void main() {
     expect(opacity, lessThan(1));
   });
 
+  testWidgets('collapsed bar controller uses configured transition', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController(initialExpanded: false);
+    final collapsedBarController = CupertinoSidebarCollapsedBarController();
+    addTearDown(controller.dispose);
+    addTearDown(collapsedBarController.dispose);
+
+    await tester.pumpWidget(
+      collapsedBarHost(
+        controller: controller,
+        collapsedBarController: collapsedBarController,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    collapsedBarController.hide();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 40));
+
+    final transition = tester.widget<FractionalTranslation>(
+      find.byKey(const ValueKey('cupertino-sidebar-collapsed-transition')),
+    );
+    expect(transition.translation.dy, lessThan(0));
+    expect(collapsedBarController.progress, greaterThan(0));
+    expect(collapsedBarController.progress, lessThan(1));
+    expect(
+      tester
+          .widget<IgnorePointer>(
+            find
+                .ancestor(
+                  of: find.byKey(
+                    const ValueKey('cupertino-sidebar-collapsed-transition'),
+                  ),
+                  matching: find.byType(IgnorePointer),
+                )
+                .first,
+          )
+          .ignoring,
+      isTrue,
+    );
+
+    await tester.pumpAndSettle();
+    expect(collapsedBarController.progress, 0);
+    collapsedBarController.show();
+    await tester.pumpAndSettle();
+    expect(collapsedBarController.progress, 1);
+
+    controller.expanded = true;
+    await tester.pumpAndSettle();
+    expect(collapsedBarController.visible, isTrue);
+    expect(collapsedBarController.progress, 0);
+  });
+
   testWidgets('press drag moves the collapsed bar selection', (tester) async {
     useLargeTestWindow(tester);
     final controller = AdaptiveNavigationController(initialExpanded: false);
@@ -499,11 +707,11 @@ void main() {
     await gesture.moveTo(target);
     await tester.pump();
 
-    expect(controller.selectedIndex, 0);
+    expect(controller.selection, const SidebarPrimarySelection(0));
 
     await gesture.up();
     await tester.pumpAndSettle();
-    expect(controller.selectedIndex, 1);
+    expect(controller.selection, const SidebarPrimarySelection(1));
     final highlight = tester.getRect(
       find.byKey(
         const ValueKey('cupertino-sidebar-collapsed-selection-highlight'),
@@ -541,12 +749,39 @@ void main() {
       capsuleColor.color,
       barColor.withValues(alpha: kCupertinoSidebarCollapsedBarGlassAlpha),
     );
+    final label = tester.widget<Text>(find.text('Home'));
+    expect(label.style?.fontSize, 15);
+    expect(label.style?.fontWeight, FontWeight.w500);
+    expect(label.style?.height, 1.2);
+    expect(
+      tester.widget<Icon>(find.byIcon(CupertinoIcons.sidebar_left)).size,
+      20,
+    );
+    expect(
+      tester
+          .getSize(
+            find.byKey(
+              const ValueKey('cupertino-sidebar-collapsed-selection-highlight'),
+            ),
+          )
+          .height,
+      36,
+    );
+    for (final index in [0, 1]) {
+      expect(
+        tester
+            .getSize(
+              find.byKey(
+                ValueKey('cupertino-sidebar-collapsed-destination-$index'),
+              ),
+            )
+            .width,
+        greaterThanOrEqualTo(kCupertinoSidebarCollapsedBarMeasuredWidth),
+      );
+    }
 
     await tester.pumpWidget(
-      collapsedBarHost(
-        controller: controller,
-        collapsedBarHeight: SidebarLeadingScope.buttonExtent,
-      ),
+      collapsedBarHost(controller: controller, collapsedBarHeight: 40),
     );
     await tester.pumpAndSettle();
     expect(
@@ -555,7 +790,7 @@ void main() {
             find.byKey(const ValueKey('cupertino-sidebar-collapsed-capsule')),
           )
           .height,
-      SidebarLeadingScope.buttonExtent,
+      40,
     );
   });
 
@@ -585,7 +820,51 @@ void main() {
       find.byKey(const ValueKey('cupertino-sidebar-collapsed-destination-1')),
     );
     await tester.pumpAndSettle();
-    expect(controller.selectedIndex, 1);
+    expect(controller.selection, const SidebarPrimarySelection(1));
+  });
+
+  testWidgets('collapsed bar preserves a more transparent theme tint', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController();
+    addTearDown(controller.dispose);
+    const barColor = Color(0x0FFFFFFF);
+
+    await tester.pumpWidget(
+      collapsedBarHost(
+        controller: controller,
+        theme: const CupertinoThemeData(barBackgroundColor: barColor),
+      ),
+    );
+    controller.expanded = false;
+    await tester.pumpAndSettle();
+
+    final capsule = find.byKey(
+      const ValueKey('cupertino-sidebar-collapsed-capsule'),
+    );
+    final capsuleColor = tester.widget<ColoredBox>(
+      find.descendant(of: capsule, matching: find.byType(ColoredBox)).first,
+    );
+    expect(capsuleColor.color, barColor);
+  });
+
+  testWidgets('collapsed bar icons are off unless requested', (tester) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController(initialExpanded: false);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(collapsedBarHost(controller: controller));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(CupertinoIcons.house_fill), findsNothing);
+    expect(find.byIcon(CupertinoIcons.search), findsNothing);
+
+    await tester.pumpWidget(
+      collapsedBarHost(controller: controller, showIcons: true),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byIcon(CupertinoIcons.house_fill), findsOneWidget);
+    expect(find.byIcon(CupertinoIcons.search), findsOneWidget);
   });
 
   testWidgets('collapsed bar separator is off unless requested', (
@@ -615,25 +894,39 @@ void main() {
 
 Widget collapsedBarHost({
   required AdaptiveNavigationController controller,
+  CupertinoThemeData theme = const CupertinoThemeData(),
+  CupertinoSidebarCollapsedBarController? collapsedBarController,
+  CupertinoSidebarCollapsedBarPlacement collapsedBarPlacement =
+      CupertinoSidebarCollapsedBarPlacement.toolbarAnchor,
   List<AdaptiveNavigationDestination> destinations = sidebarDestinations,
   TextDirection textDirection = TextDirection.ltr,
   CupertinoSidebarCollapsedBarTransitionBuilder? transitionBuilder,
+  CupertinoSidebarStyle style = CupertinoSidebarStyle.liquid,
+  CupertinoSidebarToolbarGeometry toolbarGeometry =
+      CupertinoSidebarToolbarGeometry.standard,
   double? minimumDestinationExtent,
-  double collapsedBarHeight = kCupertinoSidebarCollapsedBarMeasuredHeight,
+  double? collapsedBarHeight,
   bool collapsedBarSeparator = false,
+  bool showIcons = false,
   bool selectFromController = true,
   int? selectedIndex,
 }) {
+  final effectiveCollapsedBarHeight =
+      collapsedBarHeight ?? toolbarGeometry.collapsedBarHeight;
   return MaterialApp(
     home: Directionality(
       textDirection: textDirection,
       child: CupertinoTheme(
-        data: const CupertinoThemeData(),
+        data: theme,
         child: ListenableBuilder(
           listenable: controller,
           builder: (context, _) {
             return CupertinoSidebar(
               controller: controller,
+              collapsedBarController: collapsedBarController,
+              collapsedBarPlacement: collapsedBarPlacement,
+              style: style,
+              toolbarGeometry: toolbarGeometry,
               content: const SizedBox.shrink(),
               collapsedBarHeight: collapsedBarHeight,
               collapsedBarSeparator: collapsedBarSeparator,
@@ -646,10 +939,12 @@ Widget collapsedBarHost({
               collapsedBar: CupertinoSidebarCollapsedBar(
                 destinations: destinations,
                 selectedIndex: selectFromController
-                    ? controller.selectedIndex
+                    ? controller.selection.primaryIndex
                     : selectedIndex,
-                height: collapsedBarHeight,
-                onDestinationSelected: controller.select,
+                showIcons: showIcons,
+                height: effectiveCollapsedBarHeight,
+                onDestinationSelected: (index) =>
+                    controller.select(SidebarPrimarySelection(index)),
               ),
               child: const CupertinoPageScaffold(
                 navigationBar: CupertinoNavigationBar(

@@ -1,15 +1,14 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
 import 'package:ios_window_control_layout/ios_window_control_layout.dart';
 
-import 'navigation_obstruction.dart';
-
-/// Fills a [NavigationObstructionScope] from iPadOS window-control layout.
+/// Publishes iPadOS window-control insets as a [NavigationObstructionScope].
 ///
-/// Unsupported platforms contribute an empty obstruction. Callers that compute
-/// avoidance themselves can provide [NavigationObstructionScope] directly and
-/// skip this widget.
+/// The sidebar package does not measure window controls. Copy this adapter
+/// into an app that depends on `ios_window_control_layout`. Platforms without
+/// window controls publish zero insets.
 class IosNavigationObstruction extends StatelessWidget {
-  /// Creates an iPadOS obstruction bridge around [child].
+  /// Creates an iPadOS obstruction adapter around [child].
   const IosNavigationObstruction({super.key, required this.child});
 
   /// Navigation subtree that should avoid window controls.

@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
+import 'package:flutter_adaptive_sidebar_example/ios_navigation_obstruction.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -4,17 +4,8 @@ import '../adaptive_navigation_controller.dart';
 import '../navigation_obstruction.dart';
 import '../side_navigation_extent.dart';
 import '../sidebar_constants.dart';
+import '../sidebar_focus.dart';
 import 'material_sidebar_metrics.dart';
-
-/// Material-specific navigation rail geometry.
-class MaterialSidebarStyle {
-  /// Creates rail geometry.
-  const MaterialSidebarStyle({this.collapsedExtent = 96.0})
-    : assert(collapsedExtent > 0);
-
-  /// Width of a collapsed Material 3 wide navigation rail.
-  final double collapsedExtent;
-}
 
 /// Collapsible, resizable Material sidebar.
 ///
@@ -37,12 +28,12 @@ class MaterialSidebar extends StatefulWidget {
     required this.controller,
     required this.content,
     this.extent = const SideNavigationExtent(200),
-    this.style = const MaterialSidebarStyle(),
+    this.collapsedExtent = 96.0,
     this.dragHandleBuilder,
     this.expandLabel,
     this.collapseLabel,
     this.tooltipBuilder,
-  });
+  }) : assert(collapsedExtent > 0);
 
   /// Shared selection, expansion, and width.
   final AdaptiveNavigationController controller;
@@ -51,10 +42,13 @@ class MaterialSidebar extends StatefulWidget {
   final Widget content;
 
   /// Automatic and manually resizable rail-width policy.
+  ///
+  /// [SideNavigationExtent.minimum] is the expanded panel's lower bound and
+  /// must be wider than [collapsedExtent].
   final SideNavigationExtent extent;
 
-  /// Material-specific rail geometry.
-  final MaterialSidebarStyle style;
+  /// Width of the collapsed icon rail.
+  final double collapsedExtent;
 
   /// Visual displayed in the rail's resize target.
   final SideNavigationDragHandleBuilder? dragHandleBuilder;
@@ -77,6 +71,7 @@ class _MaterialSidebarState extends State<MaterialSidebar> {
 
   double _dragWidth = 0;
   double _dragOpenWidth = 0;
+  final Object _focusGroup = Object();
 
   AdaptiveNavigationController get _controller => widget.controller;
 
@@ -106,36 +101,40 @@ class _MaterialSidebarState extends State<MaterialSidebar> {
 
   @override
   Widget build(BuildContext context) {
+    assert(widget.extent.minimum > widget.collapsedExtent);
     final windowWidth = MediaQuery.sizeOf(context).width;
     final resolvedExpandedWidth = _controller.effectiveWidth(
       widget.extent,
       windowWidth: windowWidth,
     );
-    final expandedWidth = resolvedExpandedWidth < widget.style.collapsedExtent
-        ? widget.style.collapsedExtent
+    final expandedWidth = resolvedExpandedWidth < widget.collapsedExtent
+        ? widget.collapsedExtent
         : resolvedExpandedWidth;
     final expanded = _controller.expanded;
-    return AnimatedSize(
-      duration: _controller.resizing
-          ? const Duration(milliseconds: 1)
-          : kSidebarAnimationDuration,
-      curve: Curves.easeOut,
-      alignment: AlignmentDirectional.centerStart,
-      clipBehavior: Clip.hardEdge,
-      child: _MaterialSidebarPanel(
-        content: widget.content,
-        extended: expanded,
-        collapsedWidth: widget.style.collapsedExtent,
-        expandedWidth: expandedWidth,
-        padding: NavigationObstructionScope.of(context).sidebar,
-        dragHandleBuilder: widget.dragHandleBuilder,
-        tooltipBuilder: widget.tooltipBuilder,
-        expandNavigationLabel: _expandLabel(context),
-        collapseNavigationLabel: _collapseLabel(context),
-        onToggle: _controller.toggleExpanded,
-        onResizeStart: () => _handleResizeStart(windowWidth),
-        onResizeUpdate: (delta) => _handleResizeUpdate(delta, windowWidth),
-        onResizeEnd: _controller.endResize,
+    return SidebarFocusRegion(
+      groupId: _focusGroup,
+      child: AnimatedSize(
+        duration: _controller.resizing
+            ? const Duration(milliseconds: 1)
+            : kSidebarAnimationDuration,
+        curve: Curves.easeOut,
+        alignment: AlignmentDirectional.centerStart,
+        clipBehavior: Clip.hardEdge,
+        child: _MaterialSidebarPanel(
+          content: widget.content,
+          extended: expanded,
+          collapsedWidth: widget.collapsedExtent,
+          expandedWidth: expandedWidth,
+          padding: NavigationObstructionScope.of(context).sidebar,
+          dragHandleBuilder: widget.dragHandleBuilder,
+          tooltipBuilder: widget.tooltipBuilder,
+          expandNavigationLabel: _expandLabel(context),
+          collapseNavigationLabel: _collapseLabel(context),
+          onToggle: _controller.toggleExpanded,
+          onResizeStart: () => _handleResizeStart(windowWidth),
+          onResizeUpdate: (delta) => _handleResizeUpdate(delta, windowWidth),
+          onResizeEnd: _controller.endResize,
+        ),
       ),
     );
   }
@@ -157,19 +156,17 @@ class _MaterialSidebarState extends State<MaterialSidebar> {
       widget.extent,
       windowWidth: windowWidth,
     );
-    _dragWidth = _controller.expanded
-        ? effectiveWidth
-        : widget.style.collapsedExtent;
+    _dragWidth = _controller.expanded ? effectiveWidth : widget.collapsedExtent;
     _dragOpenWidth = _controller.expanded
         ? widget.extent.minimum
-        : widget.style.collapsedExtent + _collapsedDragOpenThreshold;
+        : widget.collapsedExtent + _collapsedDragOpenThreshold;
     _controller.beginResize(widget.extent, windowWidth: windowWidth);
   }
 
   void _handleResizeUpdate(double delta, double windowWidth) {
     _dragWidth += delta;
-    if (_dragWidth < widget.style.collapsedExtent) {
-      _dragWidth = widget.style.collapsedExtent;
+    if (_dragWidth < widget.collapsedExtent) {
+      _dragWidth = widget.collapsedExtent;
     }
 
     if (_controller.expanded) {
@@ -297,7 +294,7 @@ class _MaterialSidebarPanel extends StatelessWidget {
     );
 
     return MaterialSidebarMetrics(
-      extended: extended,
+      expanded: extended,
       collapsedWidth: collapsedWidth,
       expandedWidth: expandedWidth,
       child: Stack(children: [primaryDestinationRail, navigationResizeHandle]),

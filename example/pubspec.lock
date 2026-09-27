@@ -68,7 +68,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.0.1"
+    version: "0.1.0"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -83,7 +83,7 @@ packages:
     source: sdk
     version: "0.0.0"
   ios_window_control_layout:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: ios_window_control_layout
       sha256: d76e4b98d97d55f093df7f60dc787711c89483cf0d17d845224948321ad10c64

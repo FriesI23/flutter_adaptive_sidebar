@@ -32,6 +32,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(destinationSelected(tester, footerKey, cupertino: true), isFalse);
     expect(destinationSelected(tester, homeKey, cupertino: true), isTrue);
-    expect(controller.selectedIndex, 0);
+    expect(controller.selection, const SidebarPrimarySelection(0));
   });
 }

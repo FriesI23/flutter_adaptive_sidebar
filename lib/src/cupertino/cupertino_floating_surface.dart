@@ -3,6 +3,9 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/cupertino.dart';
 
 /// A clipped translucent surface with a backdrop blur.
+///
+/// The surface paints [backgroundColor], [blurSigma], [boxShadow], and
+/// [border] as given. It does not choose a sidebar preset.
 class CupertinoFloatingGlassSurface extends StatelessWidget {
   /// Creates a floating glass surface around [child].
   const CupertinoFloatingGlassSurface({
@@ -11,13 +14,9 @@ class CupertinoFloatingGlassSurface extends StatelessWidget {
     this.backgroundColor,
     this.borderRadius = const BorderRadius.all(Radius.circular(25)),
     this.blurSigma = 10,
+    this.boxShadow = const <BoxShadow>[],
+    this.border,
   });
-
-  static const BoxShadow _shadow = BoxShadow(
-    color: Color(0x26000000),
-    blurRadius: 16,
-    offset: Offset(0, 4),
-  );
 
   /// Content painted above the translucent surface.
   final Widget child;
@@ -28,12 +27,17 @@ class CupertinoFloatingGlassSurface extends StatelessWidget {
   /// Rounded clipping and shadow shape.
   final BorderRadius borderRadius;
 
-  /// Gaussian backdrop blur strength.
+  /// Gaussian backdrop blur strength. Zero draws no blur.
   final double blurSigma;
+
+  /// Drop shadow. An empty list draws none.
+  final List<BoxShadow> boxShadow;
+
+  /// Border painted over the surface. Null draws none.
+  final BoxBorder? border;
 
   @override
   Widget build(BuildContext context) {
-    final dark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     final resolvedBackground =
         backgroundColor ??
         CupertinoDynamicColor.resolve(
@@ -51,12 +55,16 @@ class CupertinoFloatingGlassSurface extends StatelessWidget {
       borderRadius: borderRadius,
       child: surface,
     );
-    if (dark) {
+    final resolvedBorder = border;
+    if (resolvedBorder != null) {
+      // A one-sided separator cannot share a radius with BoxDecoration.
+      // The clip above already applies [borderRadius].
+      final uniformBorder = resolvedBorder.isUniform;
       clippedSurface = DecoratedBox(
         position: DecorationPosition.foreground,
         decoration: BoxDecoration(
-          borderRadius: borderRadius,
-          border: Border.all(color: const Color(0x24FFFFFF), width: 0.5),
+          borderRadius: uniformBorder ? borderRadius : null,
+          border: resolvedBorder,
         ),
         child: clippedSurface,
       );
@@ -64,7 +72,7 @@ class CupertinoFloatingGlassSurface extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: borderRadius,
-        boxShadow: const [_shadow],
+        boxShadow: boxShadow,
       ),
       child: clippedSurface,
     );

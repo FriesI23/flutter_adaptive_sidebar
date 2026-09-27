@@ -9,29 +9,73 @@ import '../adaptive_navigation_controller.dart';
 import '../navigation_obstruction.dart';
 import '../side_navigation_extent.dart';
 import '../sidebar_constants.dart';
+import '../sidebar_focus.dart';
 import '../sidebar_leading_scope.dart';
 import 'cupertino_sidebar_button.dart';
+import 'cupertino_sidebar_chrome.dart';
 import 'cupertino_sidebar_collapsed_bar.dart';
 import 'cupertino_sidebar_panel.dart';
-
-// Measured from UITabBarController.mode = .tabSidebar on iPadOS 26.5: the
-// floating Sidebar surface is inset 10pt from every window edge.
-const double _kSidebarSurfaceMargin = 10;
-
-/// Opacity of the sidebar panel's glass fill.
-const double kCupertinoSidebarGlassAlpha = 0.7;
+import 'cupertino_sidebar_toolbar_geometry.dart';
 
 /// Opacity of the collapsed bar's glass fill.
 ///
 /// The bar is painted over the page bar. Two layers at this opacity composite
-/// to about [kCupertinoSidebarGlassAlpha]: `1 - (1 - 0.45) * (1 - 0.45)`.
+/// to about [kCupertinoSidebarLiquidFillAlpha].
 const double kCupertinoSidebarCollapsedBarGlassAlpha = 0.45;
 
-/// Destination-area width of the previous 44pt collapsed capsule.
+/// Sidebar glyph drawn inside the collapsed capsule.
 ///
-/// Pair it with [SidebarLeadingScope.buttonExtent]. The sidebar defaults to
-/// [kCupertinoSidebarCollapsedBarMeasuredWidth].
-const double kCupertinoSidebarCollapsedBarMinimumDestinationExtent = 88;
+/// Sized to remain balanced with the capsule and destination labels.
+const double _kCollapsedBarGlyphSize = 20;
+
+/// Placement of a collapsed Cupertino sidebar bar.
+enum CupertinoSidebarCollapsedBarPlacement {
+  /// Follows a [CupertinoSidebarMiddle] in the current page toolbar.
+  toolbarAnchor,
+
+  /// Stays centered over the shell's top toolbar row.
+  ///
+  /// [CupertinoSidebarMiddle] reserves the same space in each page toolbar but
+  /// does not create a composited transform target.
+  fixedToolbar,
+}
+
+/// Controls whether a Cupertino sidebar's collapsed bar is visible.
+///
+/// A controller can be attached to only one [CupertinoSidebar].
+class CupertinoSidebarCollapsedBarController extends ChangeNotifier {
+  /// Creates a collapsed-bar visibility controller.
+  CupertinoSidebarCollapsedBarController({bool visible = true})
+    : _visible = visible,
+      _progress = visible ? 1 : 0;
+
+  bool _visible;
+  double _progress;
+
+  /// Whether the collapsed bar should be shown.
+  bool get visible => _visible;
+
+  set visible(bool value) {
+    if (_visible == value) return;
+    _visible = value;
+    notifyListeners();
+  }
+
+  /// Animation progress from 0 (hidden) to 1 (shown).
+  double get progress => _progress;
+
+  /// Shows the collapsed bar using the sidebar's configured transition.
+  void show() => visible = true;
+
+  /// Hides the collapsed bar using the sidebar's configured transition.
+  void hide() => visible = false;
+
+  void _setProgress(double value) {
+    if (_progress == value) return;
+    _progress = value;
+    notifyListeners();
+  }
+}
 
 /// Hideable Cupertino sidebar placed beside [child].
 ///
@@ -41,7 +85,8 @@ const double kCupertinoSidebarCollapsedBarMinimumDestinationExtent = 88;
 /// default destination list.
 ///
 /// [collapsedBar] shows a horizontal bar in the page navigation bar while the
-/// panel is hidden. Place [CupertinoSidebarMiddle] in that bar's middle slot.
+/// panel is hidden. [collapsedBarPlacement] either follows a
+/// [CupertinoSidebarMiddle] or keeps the bar fixed over the shell toolbar.
 ///
 /// ```text
 /// open                    hidden, no bar
@@ -58,26 +103,96 @@ const double kCupertinoSidebarCollapsedBarMinimumDestinationExtent = 88;
 /// +------------------------------------------+
 /// ```
 class CupertinoSidebar extends StatefulWidget {
-  /// Creates a Cupertino sidebar around [child].
+  /// Creates an inset liquid sidebar around [child].
+  ///
+  /// Selected rows use a translucent primary tint. Pass [style] only to
+  /// override that preset. [CupertinoSidebar.edge] is the flush column with
+  /// the solid contrasting selection.
   const CupertinoSidebar({
     super.key,
     required this.controller,
     required this.content,
     required this.child,
     this.collapsedBar,
-    this.collapsedBarHeight = kCupertinoSidebarCollapsedBarMeasuredHeight,
+    this.collapsedBarController,
+    this.collapsedBarPlacement =
+        CupertinoSidebarCollapsedBarPlacement.toolbarAnchor,
+    this.toolbarGeometry = CupertinoSidebarToolbarGeometry.standard,
+    double? collapsedBarHeight,
     this.collapsedBarMinimumDestinationExtent =
         kCupertinoSidebarCollapsedBarMeasuredWidth,
     this.collapsedBarSeparator = false,
     this.collapsedBarTransitionBuilder =
         CupertinoSidebarCollapsedBarTransition.drop,
     this.extent = const SideNavigationExtent(200),
+    this.style = CupertinoSidebarStyle.liquid,
     this.dragHandleBuilder,
     this.expandLabel,
     this.collapseLabel,
     this.tooltipBuilder,
-    this.backgroundColor,
-  });
+    this.scaffoldBackgroundColor,
+  }) : // Keep the public override name while storing its nullable const value.
+       // ignore: prefer_initializing_formals
+       _collapsedBarHeight = collapsedBarHeight;
+
+  /// Creates a sidebar flush with the window edge.
+  ///
+  /// The glass is [CupertinoSidebarStyle.liquidEdge]. Selected rows inside
+  /// [content] use a solid primary fill and the contrasting label color.
+  const CupertinoSidebar.edge({
+    Key? key,
+    required AdaptiveNavigationController controller,
+    required Widget content,
+    required Widget child,
+    Widget? collapsedBar,
+    CupertinoSidebarCollapsedBarController? collapsedBarController,
+    CupertinoSidebarCollapsedBarPlacement collapsedBarPlacement =
+        CupertinoSidebarCollapsedBarPlacement.toolbarAnchor,
+    CupertinoSidebarToolbarGeometry toolbarGeometry =
+        CupertinoSidebarToolbarGeometry.standard,
+    double? collapsedBarHeight,
+    double collapsedBarMinimumDestinationExtent =
+        kCupertinoSidebarCollapsedBarMeasuredWidth,
+    bool collapsedBarSeparator = false,
+    CupertinoSidebarCollapsedBarTransitionBuilder
+        collapsedBarTransitionBuilder =
+        CupertinoSidebarCollapsedBarTransition.drop,
+    SideNavigationExtent extent = const SideNavigationExtent(200),
+    SideNavigationDragHandleBuilder? dragHandleBuilder,
+    String? expandLabel,
+    String? collapseLabel,
+    NavigationTooltipBuilder? tooltipBuilder,
+    Color? scaffoldBackgroundColor,
+  }) : this(
+         key: key,
+         controller: controller,
+         content: content,
+         child: child,
+         collapsedBar: collapsedBar,
+         collapsedBarController: collapsedBarController,
+         collapsedBarPlacement: collapsedBarPlacement,
+         toolbarGeometry: toolbarGeometry,
+         collapsedBarHeight: collapsedBarHeight,
+         collapsedBarMinimumDestinationExtent:
+             collapsedBarMinimumDestinationExtent,
+         collapsedBarSeparator: collapsedBarSeparator,
+         collapsedBarTransitionBuilder: collapsedBarTransitionBuilder,
+         extent: extent,
+         style: CupertinoSidebarStyle.liquidEdge,
+         dragHandleBuilder: dragHandleBuilder,
+         expandLabel: expandLabel,
+         collapseLabel: collapseLabel,
+         tooltipBuilder: tooltipBuilder,
+         scaffoldBackgroundColor: scaffoldBackgroundColor,
+       );
+
+  /// Whether selected rows in [context] use the solid contrasting fill.
+  ///
+  /// True inside [CupertinoSidebar.edge], or a sidebar whose [style] is
+  /// [CupertinoSidebarStyle.liquidEdge]. False otherwise.
+  static bool filledSelectionOf(BuildContext context) {
+    return _CupertinoSidebarMode.filledOf(context);
+  }
 
   /// Shared selection, visibility, and width.
   final AdaptiveNavigationController controller;
@@ -92,26 +207,34 @@ class CupertinoSidebar extends StatefulWidget {
   ///
   /// Null keeps the sidebar fully hidden and leaves the toggle in the page's
   /// leading slot. When set, the toggle moves to the start of this bar and
-  /// [CupertinoSidebarMiddle] swaps it with the page title.
+  /// [CupertinoSidebarMiddle] swaps the page title for either the bar anchor or
+  /// a matching placeholder, according to [collapsedBarPlacement].
   ///
   /// The bar keeps the sidebar button plus
   /// [collapsedBarMinimumDestinationExtent]. Anything narrower overflows.
   final Widget? collapsedBar;
 
+  /// Controls whether [collapsedBar] is visible independently of the panel.
+  final CupertinoSidebarCollapsedBarController? collapsedBarController;
+
+  /// Places [collapsedBar] in a page toolbar or in the fixed shell toolbar.
+  final CupertinoSidebarCollapsedBarPlacement collapsedBarPlacement;
+
+  /// Shared vertical geometry for the collapsed bar and page toolbar.
+  ///
+  /// Use [CupertinoSidebarToolbarGeometry.standard] for the measured iPad
+  /// layout and [CupertinoSidebarToolbarGeometry.compact] for desktop.
+  final CupertinoSidebarToolbarGeometry toolbarGeometry;
+
   /// Height of [collapsedBar], and of the toggle inside it.
   ///
-  /// Defaults to [kCupertinoSidebarCollapsedBarMeasuredHeight]. Pass
-  /// [SidebarLeadingScope.buttonExtent] for the previous 44pt capsule, and
-  /// the same value to [CupertinoSidebarCollapsedBar.height].
-  ///
-  /// ```text
-  /// measured                 previous
-  /// +----------------+       +----------------------+
-  /// | [=] Recents    |       | [=]  Home            |
-  /// +----------------+       +----------------------+
-  /// 36 tall, 80 wide         44 tall, 88 wide
-  /// ```
-  final double collapsedBarHeight;
+  /// Defaults to [toolbarGeometry]'s collapsed-bar height. Pass the same value
+  /// to [CupertinoSidebarCollapsedBar.height] when constructing the bar
+  /// manually.
+  double get collapsedBarHeight =>
+      _collapsedBarHeight ?? toolbarGeometry.collapsedBarHeight;
+
+  final double? _collapsedBarHeight;
 
   /// Minimum width of the destination area in [collapsedBar].
   ///
@@ -154,6 +277,15 @@ class CupertinoSidebar extends StatefulWidget {
   /// Automatic and manually resizable panel-width policy.
   final SideNavigationExtent extent;
 
+  /// Glass treatment of the expanded panel, and the selection fill.
+  ///
+  /// Defaults to [CupertinoSidebarStyle.liquid], the inset rounded surface
+  /// with a translucent selection. [CupertinoSidebarStyle.liquidEdge], also
+  /// selected by [CupertinoSidebar.edge], draws a column that meets the
+  /// window edge and a solid contrasting selection. The package does not
+  /// choose this from the platform.
+  final CupertinoSidebarStyle style;
+
   /// Optional visual displayed inside the resize target.
   final SideNavigationDragHandleBuilder? dragHandleBuilder;
 
@@ -166,21 +298,20 @@ class CupertinoSidebar extends StatefulWidget {
   /// Optional tooltip wrapper for the show and hide button.
   final NavigationTooltipBuilder? tooltipBuilder;
 
-  /// Shared background for the backdrop and the content beside the sidebar.
+  /// Shared scaffold color for the backdrop and the content beside the sidebar.
   ///
   /// When null, both use [CupertinoThemeData.scaffoldBackgroundColor]. The
-  /// page keeps that opaque color. The panel uses [kCupertinoSidebarGlassAlpha]
-  /// and the collapsed bar uses [kCupertinoSidebarCollapsedBarGlassAlpha], both
-  /// taken from the theme bar color.
-  final Color? backgroundColor;
+  /// page keeps that opaque color. The panel fill, blur, shadow, and border
+  /// come from [style]. The collapsed bar caps the theme bar color opacity at
+  /// [kCupertinoSidebarCollapsedBarGlassAlpha].
+  final Color? scaffoldBackgroundColor;
 
   @override
   State<CupertinoSidebar> createState() => _CupertinoSidebarState();
 }
 
 class _CupertinoSidebarState extends State<CupertinoSidebar>
-    with SingleTickerProviderStateMixin {
-  static const double _contentGap = 12;
+    with TickerProviderStateMixin {
   static const double _edgeGestureWidth = 20;
   static const double _appBarLeadingPadding = 16;
   static const double _panelToggleTrailingPadding = 8;
@@ -188,6 +319,15 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
   late final AnimationController _animation = AnimationController(
     vsync: this,
     value: widget.controller.expanded ? 1 : 0,
+  );
+  late final AnimationController _collapsedBarVisibility = AnimationController(
+    vsync: this,
+    value: widget.collapsedBarController?.visible == false ? 0 : 1,
+  )..addListener(_reportCollapsedBarVisibility);
+  late final Animation<double> _curvedCollapsedBarVisibility = CurvedAnimation(
+    parent: _collapsedBarVisibility,
+    curve: Curves.easeOut,
+    reverseCurve: Curves.easeOut,
   );
   final LayerLink _collapsedBarLink = LayerLink();
   Size? _collapsedBarSize;
@@ -211,6 +351,7 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
   final FocusNode _toggleFocusNode = FocusNode(
     debugLabel: 'cupertino-sidebar-toggle',
   );
+  final Object _focusGroup = Object();
   double _edgeDragDistance = 0;
 
   AdaptiveNavigationController get _controller => widget.controller;
@@ -219,6 +360,11 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
   void initState() {
     super.initState();
     _controller.addListener(_onControllerChanged);
+    _animation.addListener(_reportCollapsedBarVisibility);
+    widget.collapsedBarController?.addListener(
+      _onCollapsedBarControllerChanged,
+    );
+    _reportCollapsedBarVisibility();
   }
 
   @override
@@ -227,21 +373,41 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
     _animation.duration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : kSidebarAnimationDuration;
+    _collapsedBarVisibility.duration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : kSidebarAnimationDuration;
   }
 
   @override
   void didUpdateWidget(covariant CupertinoSidebar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller == widget.controller) return;
-    oldWidget.controller.removeListener(_onControllerChanged);
-    widget.controller.addListener(_onControllerChanged);
-    _syncExpandedAnimation();
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onControllerChanged);
+      widget.controller.addListener(_onControllerChanged);
+      _syncExpandedAnimation();
+    }
+    if (oldWidget.collapsedBarController != widget.collapsedBarController) {
+      oldWidget.collapsedBarController?.removeListener(
+        _onCollapsedBarControllerChanged,
+      );
+      widget.collapsedBarController?.addListener(
+        _onCollapsedBarControllerChanged,
+      );
+      _syncCollapsedBarVisibility();
+    }
   }
 
   @override
   void dispose() {
     _controller.removeListener(_onControllerChanged);
+    widget.collapsedBarController?.removeListener(
+      _onCollapsedBarControllerChanged,
+    );
     _toggleFocusNode.dispose();
+    _animation.removeListener(_reportCollapsedBarVisibility);
+    _collapsedBarVisibility
+      ..removeListener(_reportCollapsedBarVisibility)
+      ..dispose();
     _animation.dispose();
     super.dispose();
   }
@@ -257,6 +423,27 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
     } else {
       _animation.reverse();
     }
+  }
+
+  void _onCollapsedBarControllerChanged() {
+    _syncCollapsedBarVisibility();
+  }
+
+  void _syncCollapsedBarVisibility() {
+    final visible = widget.collapsedBarController?.visible ?? true;
+    if (visible) {
+      if (_collapsedBarVisibility.value == 1) return;
+      _collapsedBarVisibility.forward();
+    } else {
+      if (_collapsedBarVisibility.value == 0) return;
+      _collapsedBarVisibility.reverse();
+    }
+  }
+
+  void _reportCollapsedBarVisibility() {
+    widget.collapsedBarController?._setProgress(
+      (1 - _curvedAnimation.value) * _curvedCollapsedBarVisibility.value,
+    );
   }
 
   void _handleResizeStart(double windowWidth) {
@@ -311,13 +498,21 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
     final mediaPadding = MediaQuery.paddingOf(context);
     final direction = Directionality.of(context);
     final obstruction = NavigationObstructionScope.of(context);
-    final leadingSafeMargin = math.max(
-      _kSidebarSurfaceMargin,
-      direction == TextDirection.ltr ? mediaPadding.left : mediaPadding.right,
-    );
+    final chrome = CupertinoSidebarChrome.of(widget.style);
+    final leadingMediaPadding = direction == TextDirection.ltr
+        ? mediaPadding.left
+        : mediaPadding.right;
+    // A flush column starts at the window edge. The floating surface keeps
+    // its inset, which is at least the measured margin and the safe area.
+    final panelOrigin = chrome.flushToWindowEdge
+        ? 0.0
+        : math.max(chrome.surfaceMargin, leadingMediaPadding);
     // The traffic-light row is the ordinary toolbar, not the extra vertical
     // corner avoidance. Horizontal avoidance still shifts the button aside.
-    final buttonTop = math.max(_kSidebarSurfaceMargin, mediaPadding.top);
+    final buttonTop = math.max(
+      math.max(chrome.surfaceMargin, widget.toolbarGeometry.topInset),
+      mediaPadding.top,
+    );
     final sideNavigationStart = direction == TextDirection.ltr
         ? obstruction.sidebar.left
         : obstruction.sidebar.right;
@@ -325,7 +520,7 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
         ? obstruction.sidebar.right
         : obstruction.sidebar.left;
     final visibleButtonStart =
-        leadingSafeMargin +
+        panelOrigin +
         panelWidth -
         math.max(sideNavigationEnd, _panelToggleTrailingPadding) -
         SidebarLeadingScope.buttonExtent;
@@ -339,22 +534,19 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
           removeRight: direction == TextDirection.rtl,
         );
     final sharedBackground = CupertinoDynamicColor.resolve(
-      widget.backgroundColor ??
+      widget.scaffoldBackgroundColor ??
           CupertinoTheme.of(context).scaffoldBackgroundColor,
       context,
     );
     // Resolved above the content theme, which replaces the bar color with the
-    // opaque scaffold fill. The panel and the collapsed bar share that bar
-    // color and use different opacities.
+    // opaque scaffold fill. The collapsed bar uses that bar color. The panel
+    // fill comes from [chrome].
     final barBackground = CupertinoDynamicColor.resolve(
       CupertinoTheme.of(context).barBackgroundColor,
       context,
     );
-    final panelGlass = barBackground.withValues(
-      alpha: kCupertinoSidebarGlassAlpha,
-    );
     final collapsedBarGlass = barBackground.withValues(
-      alpha: kCupertinoSidebarCollapsedBarGlassAlpha,
+      alpha: math.min(barBackground.a, kCupertinoSidebarCollapsedBarGlassAlpha),
     );
     final content = CupertinoTheme(
       data: CupertinoTheme.of(context).copyWith(
@@ -364,12 +556,17 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
       child: widget.child,
     );
     return AnimatedBuilder(
-      animation: _curvedAnimation,
+      animation: Listenable.merge([
+        _curvedAnimation,
+        _curvedCollapsedBarVisibility,
+      ]),
       child: content,
       builder: (context, child) {
         final expandedProgress = _curvedAnimation.value;
         final panelActive = _animation.value > 0;
         final appBarProgress = 1 - expandedProgress;
+        final collapsedBarProgress =
+            appBarProgress * _curvedCollapsedBarVisibility.value;
         final toolbarAvoidance = EdgeInsets.fromLTRB(
           obstruction.toolbar.left * appBarProgress,
           0,
@@ -391,12 +588,14 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
             expandedProgress,
           ),
         );
-        final collapsedBarEnabled = widget.collapsedBar != null;
+        final collapsedBar = widget.collapsedBar;
+        final collapsedBarEnabled = collapsedBar != null;
         // The toggle stays on the panel until the sidebar is fully hidden,
         // then it is the only mounted toggle and lives in the capsule.
         final toggleInCapsule = collapsedBarEnabled && expandedProgress == 0;
-        final capsule = collapsedBarEnabled
-            ? CupertinoSidebarCollapsedCapsule(
+        final capsule = collapsedBar == null
+            ? null
+            : CupertinoSidebarCollapsedCapsule(
                 backgroundColor: collapsedBarGlass,
                 minimumBodyExtent: widget.collapsedBarMinimumDestinationExtent,
                 height: widget.collapsedBarHeight,
@@ -409,79 +608,94 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
                         buttonKey: const ValueKey('cupertino-sidebar-toggle'),
                         tooltipBuilder: widget.tooltipBuilder,
                         extent: widget.collapsedBarHeight,
+                        iconSize: _kCollapsedBarGlyphSize,
                       )
                     : _CollapsedTogglePlaceholder(
                         extent: widget.collapsedBarHeight,
                       ),
-                child: widget.collapsedBar!,
-              )
-            : null;
+                child: collapsedBar,
+              );
         final branch = _CupertinoSidebarBranch(
           occupiedSpan:
-              (leadingSafeMargin + panelWidth + _contentGap) * expandedProgress,
+              (panelOrigin + panelWidth + chrome.contentGap) * expandedProgress,
           child: _CupertinoSidebarCollapsedScope(
             showBar: capsule != null,
             barLink: _collapsedBarLink,
+            placement: widget.collapsedBarPlacement,
             barSize: _collapsedBarSize,
             slotWidth: _collapsedBarSlotWidth,
-            collapseProgress: appBarProgress,
+            collapseProgress: collapsedBarProgress,
             reportSlotWidth: _reportCollapsedBarSlotWidth,
             barHeight: widget.collapsedBarHeight,
             child: SidebarLeadingScope(
               toolbarAvoidance: toolbarAvoidance,
               progress: collapsedBarEnabled ? 0 : appBarProgress,
-              child: MediaQuery(data: effectiveBranchMediaQuery, child: child!),
+              child: MediaQuery(
+                data: effectiveBranchMediaQuery,
+                child: child ?? content,
+              ),
             ),
           ),
         );
-        final collapsedBarVisible = capsule != null;
+        final collapsedBarOverlay = capsule == null
+            ? null
+            : switch (widget.collapsedBarPlacement) {
+                CupertinoSidebarCollapsedBarPlacement.toolbarAnchor =>
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    child: CompositedTransformFollower(
+                      link: _collapsedBarLink,
+                      showWhenUnlinked: false,
+                      child: _buildCollapsedBarHost(
+                        capsule,
+                        collapsedBarProgress,
+                        maxWidth: _collapsedBarSlotWidth ?? double.infinity,
+                      ),
+                    ),
+                  ),
+                CupertinoSidebarCollapsedBarPlacement.fixedToolbar =>
+                  Positioned(
+                    key: const ValueKey('cupertino-sidebar-fixed-toolbar-host'),
+                    left: 0,
+                    right: 0,
+                    top: buttonTop,
+                    height: widget.toolbarGeometry.contentHeight,
+                    child: Center(
+                      child: _buildCollapsedBarHost(
+                        capsule,
+                        collapsedBarProgress,
+                      ),
+                    ),
+                  ),
+              };
         final stack = Stack(
           key: const ValueKey('cupertino-sidebar-beside-host'),
           fit: StackFit.expand,
           children: [
             branch,
-            if (collapsedBarVisible)
-              Positioned(
-                left: 0,
-                top: 0,
-                child: CompositedTransformFollower(
-                  link: _collapsedBarLink,
-                  showWhenUnlinked: false,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: _collapsedBarSlotWidth ?? double.infinity,
-                    ),
-                    child: _ReportSize(
-                      onSize: _reportCollapsedBarSize,
-                      child: IgnorePointer(
-                        ignoring: appBarProgress < 1,
-                        child: ExcludeSemantics(
-                          excluding: appBarProgress < 1,
-                          child: widget.collapsedBarTransitionBuilder(
-                            context,
-                            appBarProgress,
-                            capsule,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            ?collapsedBarOverlay,
             if (panelActive)
-              _CupertinoSidebarAnimatedPanel(
-                progress: expandedProgress,
-                child: CupertinoSidebarPanel(
-                  width: panelWidth,
-                  backgroundColor: panelGlass,
-                  contentActive: expandedProgress == 1,
-                  content: widget.content,
-                  dragging: _controller.resizing,
-                  dragHandleBuilder: widget.dragHandleBuilder,
-                  onResizeStart: () => _handleResizeStart(windowWidth),
-                  onResizeUpdate: (delta) =>
-                      _handleResizeUpdate(delta, windowWidth),
-                  onResizeEnd: _controller.endResize,
+              SidebarFocusRegion(
+                groupId: _focusGroup,
+                child: _CupertinoSidebarAnimatedPanel(
+                  progress: expandedProgress,
+                  chrome: chrome,
+                  child: CupertinoSidebarPanel(
+                    chrome: chrome,
+                    width: panelWidth,
+                    contentActive: expandedProgress == 1,
+                    content: _CupertinoSidebarMode(
+                      filled: widget.style == CupertinoSidebarStyle.liquidEdge,
+                      child: widget.content,
+                    ),
+                    dragging: _controller.resizing,
+                    dragHandleBuilder: widget.dragHandleBuilder,
+                    onResizeStart: () => _handleResizeStart(windowWidth),
+                    onResizeUpdate: (delta) =>
+                        _handleResizeUpdate(delta, windowWidth),
+                    onResizeEnd: _controller.endResize,
+                  ),
                 ),
               ),
             if (!toggleInCapsule)
@@ -491,16 +705,19 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
                 top: buttonTop,
                 width: SidebarLeadingScope.buttonExtent,
                 height: SidebarLeadingScope.buttonExtent,
-                child: Opacity(
-                  opacity: collapsedBarEnabled ? expandedProgress : 1,
-                  child: CupertinoSidebarButton(
-                    focusNode: _toggleFocusNode,
-                    label: _controller.expanded
-                        ? collapseNavigationLabel
-                        : expandNavigationLabel,
-                    onPressed: _controller.toggleExpanded,
-                    buttonKey: const ValueKey('cupertino-sidebar-toggle'),
-                    tooltipBuilder: widget.tooltipBuilder,
+                child: SidebarFocusRegion(
+                  groupId: _focusGroup,
+                  child: Opacity(
+                    opacity: collapsedBarEnabled ? expandedProgress : 1,
+                    child: CupertinoSidebarButton(
+                      focusNode: _toggleFocusNode,
+                      label: _controller.expanded
+                          ? collapseNavigationLabel
+                          : expandNavigationLabel,
+                      onPressed: _controller.toggleExpanded,
+                      buttonKey: const ValueKey('cupertino-sidebar-toggle'),
+                      tooltipBuilder: widget.tooltipBuilder,
+                    ),
                   ),
                 ),
               ),
@@ -521,6 +738,33 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
           child: hosted,
         );
       },
+    );
+  }
+
+  Widget _buildCollapsedBarHost(
+    Widget capsule,
+    double progress, {
+    double maxWidth = double.infinity,
+  }) {
+    return SidebarFocusRegion(
+      groupId: _focusGroup,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: _ReportSize(
+          onSize: _reportCollapsedBarSize,
+          child: IgnorePointer(
+            ignoring: progress < 1,
+            child: ExcludeSemantics(
+              excluding: progress < 1,
+              child: widget.collapsedBarTransitionBuilder(
+                context,
+                progress,
+                capsule,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -627,28 +871,32 @@ class _CupertinoSidebarBranch extends StatelessWidget {
 class _CupertinoSidebarAnimatedPanel extends StatelessWidget {
   const _CupertinoSidebarAnimatedPanel({
     required this.progress,
+    required this.chrome,
     required this.child,
   });
 
   final double progress;
+  final CupertinoSidebarChrome chrome;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final direction = Directionality.of(context);
-    return SafeArea(
-      minimum: const EdgeInsets.all(_kSidebarSurfaceMargin),
-      child: Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: FractionalTranslation(
-          key: const ValueKey('cupertino-sidebar-panel-transition'),
-          translation: Offset(
-            (direction == TextDirection.ltr ? -1 : 1) * (1 - progress),
-            0,
-          ),
-          child: Opacity(opacity: progress, child: child),
+    final sliding = Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: FractionalTranslation(
+        key: const ValueKey('cupertino-sidebar-panel-transition'),
+        translation: Offset(
+          (direction == TextDirection.ltr ? -1 : 1) * (1 - progress),
+          0,
         ),
+        child: Opacity(opacity: progress, child: child),
       ),
+    );
+    if (chrome.flushToWindowEdge) return sliding;
+    return SafeArea(
+      minimum: EdgeInsets.all(chrome.surfaceMargin),
+      child: sliding,
     );
   }
 }
@@ -659,7 +907,7 @@ class _CupertinoSidebarAnimatedPanel extends StatelessWidget {
 typedef CupertinoSidebarCollapsedBarTransitionBuilder =
     Widget Function(BuildContext context, double progress, Widget child);
 
-/// Built-in transitions for [CupertinoSidebar.collapsedBar].
+/// Built-in transitions for [CupertinoSidebar.collapsedBarTransitionBuilder].
 ///
 /// ```text
 /// drop                         fade
@@ -691,6 +939,7 @@ class _CupertinoSidebarCollapsedScope extends InheritedWidget {
   const _CupertinoSidebarCollapsedScope({
     required this.showBar,
     required this.barLink,
+    required this.placement,
     required this.barSize,
     required this.slotWidth,
     required this.collapseProgress,
@@ -701,6 +950,7 @@ class _CupertinoSidebarCollapsedScope extends InheritedWidget {
 
   final bool showBar;
   final LayerLink barLink;
+  final CupertinoSidebarCollapsedBarPlacement placement;
   final Size? barSize;
   final double? slotWidth;
   final double collapseProgress;
@@ -719,15 +969,18 @@ class _CupertinoSidebarCollapsedScope extends InheritedWidget {
         oldWidget.barSize != barSize ||
         oldWidget.slotWidth != slotWidth ||
         oldWidget.barLink != barLink ||
+        oldWidget.placement != placement ||
         oldWidget.barHeight != barHeight;
   }
 }
 
-/// Slot that swaps the page title for the collapsed horizontal bar.
+/// Slot that swaps the page title for collapsed horizontal bar space.
 ///
 /// Shows [title] while the sidebar is open. When
 /// [CupertinoSidebar.collapsedBar] is set, the hidden sidebar replaces [title]
-/// with that horizontal bar.
+/// with that horizontal bar. For
+/// [CupertinoSidebarCollapsedBarPlacement.fixedToolbar], this widget reserves
+/// the measured bar size while the shell paints the bar itself.
 /// The bar uses [CupertinoSidebar.collapsedBarTransitionBuilder].
 ///
 /// ```text
@@ -746,28 +999,36 @@ class CupertinoSidebarMiddle extends StatelessWidget {
     final scope = _CupertinoSidebarCollapsedScope.maybeOf(context);
     if (scope == null || !scope.showBar) return title;
     final collapse = scope.collapseProgress.clamp(0.0, 1.0);
-    return _ReportSlotWidth(
-      onWidth: scope.reportSlotWidth,
-      child: Stack(
-        alignment: Alignment.center,
-        clipBehavior: Clip.none,
-        children: [
-          IgnorePointer(
-            ignoring: collapse > 0,
-            child: ExcludeSemantics(
-              excluding: collapse > 0,
-              child: Opacity(opacity: 1 - collapse, child: title),
-            ),
+    final middle = Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.none,
+      children: [
+        IgnorePointer(
+          ignoring: collapse > 0,
+          child: ExcludeSemantics(
+            excluding: collapse > 0,
+            child: Opacity(opacity: 1 - collapse, child: title),
           ),
+        ),
+        if (scope.placement ==
+            CupertinoSidebarCollapsedBarPlacement.toolbarAnchor)
           CompositedTransformTarget(
             link: scope.barLink,
             child: SizedBox.fromSize(
               size: scope.barSize ?? Size(0, scope.barHeight),
             ),
+          )
+        else
+          SizedBox.fromSize(
+            key: const ValueKey('cupertino-sidebar-fixed-toolbar-placeholder'),
+            size: scope.barSize ?? Size(0, scope.barHeight),
           ),
-        ],
-      ),
+      ],
     );
+    if (scope.placement == CupertinoSidebarCollapsedBarPlacement.fixedToolbar) {
+      return middle;
+    }
+    return _ReportSlotWidth(onWidth: scope.reportSlotWidth, child: middle);
   }
 }
 
@@ -786,9 +1047,27 @@ class _CollapsedTogglePlaceholder extends StatelessWidget {
         direction == TextDirection.ltr
             ? CupertinoIcons.sidebar_left
             : CupertinoIcons.sidebar_right,
+        size: _kCollapsedBarGlyphSize,
         color: CupertinoTheme.of(context).primaryColor,
       ),
     );
+  }
+}
+
+class _CupertinoSidebarMode extends InheritedWidget {
+  const _CupertinoSidebarMode({required this.filled, required super.child});
+
+  final bool filled;
+
+  static bool filledOf(BuildContext context) {
+    final scope = context
+        .dependOnInheritedWidgetOfExactType<_CupertinoSidebarMode>();
+    return scope?.filled ?? false;
+  }
+
+  @override
+  bool updateShouldNotify(_CupertinoSidebarMode oldWidget) {
+    return filled != oldWidget.filled;
   }
 }
 

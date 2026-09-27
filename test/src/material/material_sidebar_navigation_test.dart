@@ -32,7 +32,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(destinationSelected(tester, footerKey, cupertino: false), isFalse);
     expect(destinationSelected(tester, homeKey, cupertino: false), isTrue);
-    expect(controller.selectedIndex, 0);
+    expect(controller.selection, const SidebarPrimarySelection(0));
   });
 
   testWidgets('navigation requires the sidebar metrics', (tester) async {
@@ -43,8 +43,8 @@ void main() {
       MaterialApp(
         home: MaterialSidebarNavigation(
           destinations: sidebarDestinations,
-          selectedIndex: 0,
-          onDestinationSelected: controller.select,
+          selection: const SidebarPrimarySelection(0),
+          onSelectionChanged: controller.select,
         ),
       ),
     );

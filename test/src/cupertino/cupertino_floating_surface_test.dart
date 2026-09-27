@@ -36,12 +36,17 @@ void main() {
     expect(find.byType(BackdropFilter), findsOneWidget);
   });
 
-  testWidgets('dark mode draws a hairline border', (tester) async {
+  testWidgets('dark mode draws a border only when one is provided', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const CupertinoApp(
         theme: CupertinoThemeData(brightness: Brightness.dark),
         home: CupertinoFloatingGlassSurface(
           backgroundColor: Color(0xFF112233),
+          border: Border.fromBorderSide(
+            BorderSide(color: Color(0x24FFFFFF), width: 0.5),
+          ),
           child: SizedBox.expand(),
         ),
       ),

@@ -5,14 +5,14 @@ class MaterialSidebarMetrics extends InheritedWidget {
   /// Creates metrics for a sidebar panel.
   const MaterialSidebarMetrics({
     super.key,
-    required this.extended,
+    required this.expanded,
     required this.collapsedWidth,
     required this.expandedWidth,
     required super.child,
   });
 
   /// Whether the rail is using its expanded width.
-  final bool extended;
+  final bool expanded;
 
   /// Width of the collapsed rail.
   final double collapsedWidth;
@@ -33,7 +33,7 @@ class MaterialSidebarMetrics extends InheritedWidget {
 
   @override
   bool updateShouldNotify(MaterialSidebarMetrics oldWidget) =>
-      extended != oldWidget.extended ||
+      expanded != oldWidget.expanded ||
       collapsedWidth != oldWidget.collapsedWidth ||
       expandedWidth != oldWidget.expandedWidth;
 }

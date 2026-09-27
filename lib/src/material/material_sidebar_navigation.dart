@@ -3,14 +3,16 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 
 import '../adaptive_navigation_destination.dart';
+import '../sidebar_destination_selection.dart';
 import 'material_rail_destination_group_layout.dart';
+import 'material_sidebar_item_style.dart';
 import 'material_sidebar_metrics.dart';
 import 'material_wide_navigation_rail_button.dart';
 
 /// Scrollable Material destinations with a pinned footer.
 ///
-/// Place this in `MaterialSidebar.content`. A selected auxiliary destination
-/// clears the primary highlight.
+/// Place this in `MaterialSidebar.content`. [selection] is either a primary
+/// destination, an auxiliary destination, or null when nothing is highlighted.
 ///
 /// ```text
 /// collapsed           expanded
@@ -26,11 +28,10 @@ class MaterialSidebarNavigation extends StatelessWidget {
   const MaterialSidebarNavigation({
     super.key,
     required this.destinations,
-    required this.selectedIndex,
-    required this.onDestinationSelected,
+    required this.selection,
+    required this.onSelectionChanged,
     this.auxiliaryDestinations = const [],
-    this.selectedAuxiliaryIndex,
-    this.onAuxiliaryDestinationSelected,
+    this.itemStyle,
   }) : assert(destinations.length > 0);
 
   static const double _collapsedDestinationSpacing = 4.0;
@@ -41,42 +42,44 @@ class MaterialSidebarNavigation extends StatelessWidget {
   /// Primary destinations.
   final List<AdaptiveNavigationDestination> destinations;
 
-  /// Selected primary destination.
-  ///
-  /// Ignored while [selectedAuxiliaryIndex] is non-null.
-  final int selectedIndex;
+  /// Selected destination, or null when nothing in either list is highlighted.
+  final SidebarDestinationSelection? selection;
 
-  /// Called with the index of a selected primary destination.
-  final ValueChanged<int> onDestinationSelected;
+  /// Called with the destination the user tapped.
+  final ValueChanged<SidebarDestinationSelection> onSelectionChanged;
 
   /// Destinations pinned below the scrolling list.
   final List<AdaptiveNavigationDestination> auxiliaryDestinations;
 
-  /// Selected auxiliary destination, if any.
-  final int? selectedAuxiliaryIndex;
-
-  /// Called when an auxiliary destination is selected.
-  final ValueChanged<int>? onAuxiliaryDestinationSelected;
+  /// Indicator, label colors, and label type for every row.
+  ///
+  /// Null keeps the navigation-rail theme.
+  final MaterialSidebarItemStyle? itemStyle;
 
   @override
   Widget build(BuildContext context) {
+    assert(_selectionInRange(selection, destinations, auxiliaryDestinations));
     final metrics = MaterialSidebarMetrics.of(context);
     final animation = NavigationRail.extendedAnimation(context);
-    final primaryIndex = selectedAuxiliaryIndex == null ? selectedIndex : -1;
+    final primaryIndex = switch (selection) {
+      SidebarPrimarySelection(:final index) => index,
+      _ => -1,
+    };
+    final auxiliaryIndex = switch (selection) {
+      SidebarAuxiliarySelection(:final index) => index,
+      _ => -1,
+    };
     final destinationList = Column(
       key: const ValueKey('material-rail-primary-destination-list'),
       mainAxisSize: MainAxisSize.min,
       children: [
         for (final (index, destination) in destinations.indexed) ...[
           MaterialWideNavigationRailButton(
-            slotKey: ValueKey('material-rail-destination-slot-$index'),
-            buttonKey: ValueKey('material-rail-destination-$index'),
-            animation: animation,
-            collapsedRailWidth: metrics.collapsedWidth,
-            expandedRailWidth: metrics.expandedWidth,
+            key: ValueKey('material-rail-destination-$index'),
             destination: destination,
             selected: primaryIndex == index,
-            onPressed: () => onDestinationSelected(index),
+            itemStyle: itemStyle,
+            onPressed: () => onSelectionChanged(SidebarPrimarySelection(index)),
           ),
           if (index != destinations.length - 1)
             AnimatedBuilder(
@@ -98,20 +101,16 @@ class MaterialSidebarNavigation extends StatelessWidget {
       children: [
         for (final (index, destination) in auxiliaryDestinations.indexed) ...[
           MaterialWideNavigationRailButton(
-            slotKey: ValueKey(
-              'material-rail-auxiliary-destination-slot-$index',
-            ),
-            buttonKey: ValueKey('material-rail-auxiliary-destination-$index'),
-            animation: AlwaysStoppedAnimation(metrics.extended ? 1 : 0),
-            collapsedRailWidth: metrics.collapsedWidth,
-            expandedRailWidth: metrics.expandedWidth,
+            key: ValueKey('material-rail-auxiliary-destination-$index'),
             destination: destination,
-            selected: selectedAuxiliaryIndex == index,
-            onPressed: () => onAuxiliaryDestinationSelected?.call(index),
+            selected: auxiliaryIndex == index,
+            itemStyle: itemStyle,
+            onPressed: () =>
+                onSelectionChanged(SidebarAuxiliarySelection(index)),
           ),
           if (index != auxiliaryDestinations.length - 1)
             SizedBox(
-              height: metrics.extended
+              height: metrics.expanded
                   ? 0
                   : _collapsedAuxiliaryDestinationSpacing,
             ),
@@ -155,4 +154,17 @@ class MaterialSidebarNavigation extends StatelessWidget {
       ),
     );
   }
+}
+
+bool _selectionInRange(
+  SidebarDestinationSelection? selection,
+  List<AdaptiveNavigationDestination> destinations,
+  List<AdaptiveNavigationDestination> auxiliaryDestinations,
+) {
+  return switch (selection) {
+    null => true,
+    SidebarPrimarySelection(:final index) => index < destinations.length,
+    SidebarAuxiliarySelection(:final index) =>
+      index < auxiliaryDestinations.length,
+  };
 }
