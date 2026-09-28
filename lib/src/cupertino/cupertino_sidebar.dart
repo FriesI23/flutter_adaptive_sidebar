@@ -14,6 +14,7 @@ import '../sidebar_leading_scope.dart';
 import 'cupertino_sidebar_button.dart';
 import 'cupertino_sidebar_chrome.dart';
 import 'cupertino_sidebar_collapsed_bar.dart';
+import 'cupertino_sidebar_interaction_scope.dart';
 import 'cupertino_sidebar_panel.dart';
 import 'cupertino_sidebar_toolbar_geometry.dart';
 
@@ -107,7 +108,7 @@ class CupertinoSidebar extends StatefulWidget {
   ///
   /// Selected rows use a translucent primary tint. Pass [style] only to
   /// override that preset. [CupertinoSidebar.edge] is the flush column with
-  /// the solid contrasting selection.
+  /// iPadOS 27 selection and active-state colors.
   const CupertinoSidebar({
     super.key,
     required this.controller,
@@ -139,7 +140,7 @@ class CupertinoSidebar extends StatefulWidget {
   /// Creates a sidebar flush with the window edge.
   ///
   /// The glass is [CupertinoSidebarStyle.liquidEdge]. Selected rows inside
-  /// [content] use a solid primary fill and the contrasting label color.
+  /// [content] use iPadOS 27 unfocused, focused, and pressed colors.
   const CupertinoSidebar.edge({
     Key? key,
     required AdaptiveNavigationController controller,
@@ -189,12 +190,17 @@ class CupertinoSidebar extends StatefulWidget {
          scaffoldBackgroundColor: scaffoldBackgroundColor,
        );
 
-  /// Whether selected rows in [context] use the solid contrasting fill.
+  /// Whether selected rows in [context] use the edge interaction treatment.
   ///
   /// True inside [CupertinoSidebar.edge], or a sidebar whose [style] is
   /// [CupertinoSidebarStyle.liquidEdge]. False otherwise.
   static bool filledSelectionOf(BuildContext context) {
-    return _CupertinoSidebarMode.filledOf(context);
+    return styleOf(context) == CupertinoSidebarStyle.liquidEdge;
+  }
+
+  /// The sidebar presentation inherited by descendants in [context].
+  static CupertinoSidebarStyle styleOf(BuildContext context) {
+    return _CupertinoSidebarMode.styleOf(context);
   }
 
   /// Shared selection, visibility, and width.
@@ -285,7 +291,7 @@ class CupertinoSidebar extends StatefulWidget {
   /// Defaults to [CupertinoSidebarStyle.liquid], the inset rounded surface
   /// with a translucent selection. [CupertinoSidebarStyle.liquidEdge], also
   /// selected by [CupertinoSidebar.edge], draws a column that meets the
-  /// window edge and a solid contrasting selection. The package does not
+  /// window edge and uses iPadOS 27 selection colors. The package does not
   /// choose this from the platform.
   final CupertinoSidebarStyle style;
 
@@ -363,6 +369,7 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
   );
   final Object _focusGroup = Object();
   double _edgeDragDistance = 0;
+  int _outsideTapGeneration = 0;
 
   AdaptiveNavigationController get _controller => widget.controller;
 
@@ -483,6 +490,11 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
   }
 
   void _handleEdgeDragCancel() => _edgeDragDistance = 0;
+
+  void _handleTapOutside() {
+    if (widget.style != CupertinoSidebarStyle.liquidEdge) return;
+    setState(() => _outsideTapGeneration += 1);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -688,6 +700,7 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
             if (panelActive)
               SidebarFocusRegion(
                 groupId: _focusGroup,
+                onTapOutside: _handleTapOutside,
                 child: _CupertinoSidebarAnimatedPanel(
                   progress: expandedProgress,
                   chrome: chrome,
@@ -696,9 +709,12 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
                     width: panelWidth,
                     backgroundColor: widget.backgroundColor,
                     contentActive: expandedProgress == 1,
-                    content: _CupertinoSidebarMode(
-                      filled: widget.style == CupertinoSidebarStyle.liquidEdge,
-                      child: widget.content,
+                    content: CupertinoSidebarInteractionScope(
+                      outsideTapGeneration: _outsideTapGeneration,
+                      child: _CupertinoSidebarMode(
+                        style: widget.style,
+                        child: widget.content,
+                      ),
                     ),
                     dragging: _controller.resizing,
                     dragHandleBuilder: widget.dragHandleBuilder,
@@ -1066,19 +1082,19 @@ class _CollapsedTogglePlaceholder extends StatelessWidget {
 }
 
 class _CupertinoSidebarMode extends InheritedWidget {
-  const _CupertinoSidebarMode({required this.filled, required super.child});
+  const _CupertinoSidebarMode({required this.style, required super.child});
 
-  final bool filled;
+  final CupertinoSidebarStyle style;
 
-  static bool filledOf(BuildContext context) {
+  static CupertinoSidebarStyle styleOf(BuildContext context) {
     final scope = context
         .dependOnInheritedWidgetOfExactType<_CupertinoSidebarMode>();
-    return scope?.filled ?? false;
+    return scope?.style ?? CupertinoSidebarStyle.liquid;
   }
 
   @override
   bool updateShouldNotify(_CupertinoSidebarMode oldWidget) {
-    return filled != oldWidget.filled;
+    return style != oldWidget.style;
   }
 }
 

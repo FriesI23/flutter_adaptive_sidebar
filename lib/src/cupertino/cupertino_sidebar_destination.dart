@@ -2,7 +2,9 @@ import 'package:flutter/cupertino.dart';
 
 import '../adaptive_navigation_destination.dart';
 import 'cupertino_sidebar.dart';
+import 'cupertino_sidebar_chrome.dart';
 import 'cupertino_sidebar_item_style.dart';
+import 'cupertino_sidebar_standard_colors.dart';
 
 /// Height of the selection capsule. The corner radius is half of this.
 const double _kSelectionHeight = 44;
@@ -12,25 +14,106 @@ const double _kSelectionHeight = 44;
 /// Measured from the iPadOS 26 Files highlight.
 const double _kSelectionInset = 16;
 
+class _CupertinoSidebarDestinationDefaults {
+  const _CupertinoSidebarDestinationDefaults({
+    required this.selectedBackgroundColor,
+    required this.activeBackgroundColor,
+    required this.selectedIconColor,
+    required this.unselectedIconColor,
+    required this.activeIconColor,
+    required this.selectedLabelColor,
+    required this.unselectedLabelColor,
+    required this.activeLabelColor,
+    required this.requestsFocusOnPointerDown,
+    required this.showsFocusBorder,
+  });
+
+  factory _CupertinoSidebarDestinationDefaults.of(
+    CupertinoSidebarStyle style,
+    BuildContext context,
+  ) {
+    final theme = CupertinoTheme.of(context);
+    final primaryColor = theme.primaryColor.withValues(alpha: 1);
+    final contrastingColor = theme.primaryContrastingColor.withValues(alpha: 1);
+    final labelColor = CupertinoDynamicColor.resolve(
+      CupertinoColors.label,
+      context,
+    ).withValues(alpha: 1);
+    return switch (style) {
+      CupertinoSidebarStyle.liquid => _CupertinoSidebarDestinationDefaults(
+        selectedBackgroundColor: primaryColor.withValues(alpha: 0.14),
+        activeBackgroundColor: null,
+        selectedIconColor: primaryColor,
+        unselectedIconColor: labelColor,
+        activeIconColor: null,
+        selectedLabelColor: primaryColor,
+        unselectedLabelColor: labelColor,
+        activeLabelColor: null,
+        requestsFocusOnPointerDown: false,
+        showsFocusBorder: true,
+      ),
+      CupertinoSidebarStyle.liquidEdge => _CupertinoSidebarDestinationDefaults(
+        selectedBackgroundColor: cupertinoSidebarEdgeSelectedColor,
+        activeBackgroundColor: cupertinoSidebarEdgeActiveColor,
+        selectedIconColor: primaryColor,
+        unselectedIconColor: primaryColor,
+        activeIconColor: contrastingColor,
+        selectedLabelColor: labelColor,
+        unselectedLabelColor: labelColor,
+        activeLabelColor: contrastingColor,
+        requestsFocusOnPointerDown: true,
+        showsFocusBorder: false,
+      ),
+    };
+  }
+
+  final Color selectedBackgroundColor;
+  final Color? activeBackgroundColor;
+  final Color selectedIconColor;
+  final Color unselectedIconColor;
+  final Color? activeIconColor;
+  final Color selectedLabelColor;
+  final Color unselectedLabelColor;
+  final Color? activeLabelColor;
+  final bool requestsFocusOnPointerDown;
+  final bool showsFocusBorder;
+
+  Color? backgroundColor({required bool selected, required bool active}) {
+    if (active && activeBackgroundColor != null) return activeBackgroundColor;
+    return selected ? selectedBackgroundColor : null;
+  }
+
+  Color iconColor({required bool selected, required bool active}) {
+    if (active && activeIconColor != null) return activeIconColor!;
+    return selected ? selectedIconColor : unselectedIconColor;
+  }
+
+  Color labelColor({required bool selected, required bool active}) {
+    if (active && activeLabelColor != null) return activeLabelColor!;
+    return selected ? selectedLabelColor : unselectedLabelColor;
+  }
+}
+
 /// A Cupertino sidebar row for one navigation destination.
 ///
 /// ```text
 /// liquid                   edge
 /// o  Label                 o  Label
-/// ( o  Label )             ( O  LABEL )
-/// tint                     solid, contrasting
+/// ( o  Label )             ( o  Label )
+/// tint                     neutral until active
 /// ```
 ///
-/// Both styles share one capsule. A tap selects the row. The label dims only
-/// while the row is held as a long press. The edge fill is used inside
-/// [CupertinoSidebar.edge]. [itemStyle] replaces the fill, the label colors,
-/// and the label type.
+/// Both styles share one capsule. Edge rows use accent fill and contrasting
+/// content while active, focused, or pressed. The edge fill is used inside
+/// [CupertinoSidebar.edge]. [itemStyle] replaces the fill, icon and label
+/// colors, and label type.
 class CupertinoSidebarDestination extends StatelessWidget {
   /// Creates a destination row.
   const CupertinoSidebarDestination({
     super.key,
     required this.destination,
     required this.selected,
+    this.active = false,
     required this.onPressed,
     this.itemStyle,
   });
@@ -41,6 +124,12 @@ class CupertinoSidebarDestination extends StatelessWidget {
   /// Whether this destination is selected.
   final bool selected;
 
+  /// Whether this destination owns the retained edge interaction highlight.
+  ///
+  /// [CupertinoSidebarNavigation] keeps this stable across theme and content
+  /// rebuilds. It has no visual effect on the liquid style.
+  final bool active;
+
   /// Called when the row is pressed.
   final VoidCallback onPressed;
 
@@ -49,19 +138,9 @@ class CupertinoSidebarDestination extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = CupertinoTheme.of(context);
-    final primaryColor = theme.primaryColor;
-    final labelColor = CupertinoDynamicColor.resolve(
-      CupertinoColors.label,
+    final defaults = _CupertinoSidebarDestinationDefaults.of(
+      CupertinoSidebar.styleOf(context),
       context,
-    );
-    final filled = selected && CupertinoSidebar.filledSelectionOf(context);
-    final foregroundColor = CupertinoSidebarItemStyle.foregroundOf(
-      itemStyle,
-      selected: selected,
-      selectedFallback: (filled ? theme.primaryContrastingColor : primaryColor)
-          .withValues(alpha: 1),
-      unselectedFallback: labelColor.withValues(alpha: 1),
     );
     final icon = selected
         ? destination.icons.cupertinoSelected
@@ -88,15 +167,10 @@ class CupertinoSidebarDestination extends StatelessWidget {
         child: SizedBox(
           width: double.infinity,
           child: _SidebarCapsuleButton(
-            color: !selected
-                ? null
-                : CupertinoSidebarItemStyle.selectedColorOf(
-                    itemStyle,
-                    filled
-                        ? primaryColor
-                        : primaryColor.withValues(alpha: 0.14),
-                  ),
-            foregroundColor: foregroundColor,
+            selected: selected,
+            active: active,
+            defaults: defaults,
+            itemStyle: itemStyle,
             labelStyle: itemStyle?.labelStyle,
             onPressed: onPressed,
             child: Row(children: [icon, const SizedBox(width: 12), label]),
@@ -109,20 +183,22 @@ class CupertinoSidebarDestination extends StatelessWidget {
 
 /// Capsule used by every Cupertino sidebar row.
 ///
-/// [CupertinoButton] fades on pointer down and draws a superellipse. A tap
-/// here changes nothing until it selects, and the label color changes only
-/// after a long press.
+/// Tracks pointer, focus, hover, and selection states for one superellipse.
 class _SidebarCapsuleButton extends StatefulWidget {
   const _SidebarCapsuleButton({
-    required this.color,
-    required this.foregroundColor,
+    required this.selected,
+    required this.active,
+    required this.defaults,
+    required this.itemStyle,
     required this.labelStyle,
     required this.onPressed,
     required this.child,
   });
 
-  final Color? color;
-  final Color foregroundColor;
+  final bool selected;
+  final bool active;
+  final _CupertinoSidebarDestinationDefaults defaults;
+  final CupertinoSidebarItemStyle? itemStyle;
   final TextStyle? labelStyle;
   final VoidCallback onPressed;
   final Widget child;
@@ -132,14 +208,24 @@ class _SidebarCapsuleButton extends StatefulWidget {
 }
 
 class _SidebarCapsuleButtonState extends State<_SidebarCapsuleButton> {
-  bool _held = false;
+  bool _focused = false;
+  bool _pressed = false;
+  bool _hovered = false;
   bool _showFocusHighlight = false;
 
-  void _hold(bool value) {
-    if (_held == value) {
-      return;
-    }
-    setState(() => _held = value);
+  void _setPressed(bool value) {
+    if (_pressed == value) return;
+    setState(() => _pressed = value);
+  }
+
+  void _handleFocusChange(bool value) {
+    if (_focused == value) return;
+    setState(() => _focused = value);
+  }
+
+  void _handleHoverChange(bool value) {
+    if (_hovered == value) return;
+    setState(() => _hovered = value);
   }
 
   void _handleShowFocusHighlight(bool value) {
@@ -147,11 +233,58 @@ class _SidebarCapsuleButtonState extends State<_SidebarCapsuleButton> {
     setState(() => _showFocusHighlight = value);
   }
 
+  void _handlePointerDown(BuildContext focusContext, PointerDownEvent event) {
+    _setPressed(true);
+    if (widget.defaults.requestsFocusOnPointerDown) {
+      Focus.of(focusContext).requestFocus();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final foreground = _held
-        ? widget.foregroundColor.withValues(alpha: 0.4)
-        : widget.foregroundColor;
+    final visuallyFocused = widget.active || _focused;
+    final states = <WidgetState>{
+      if (widget.selected) WidgetState.selected,
+      if (visuallyFocused) WidgetState.focused,
+      if (_pressed) WidgetState.pressed,
+      if (_hovered) WidgetState.hovered,
+    };
+    final active = visuallyFocused || _pressed;
+    final background = CupertinoSidebarItemStyle.backgroundColorOf(
+      widget.itemStyle,
+      context,
+      states: states,
+      fallback: widget.defaults.backgroundColor(
+        selected: widget.selected,
+        active: active,
+      ),
+    );
+    final iconColor = CupertinoSidebarItemStyle.iconColorOf(
+      widget.itemStyle,
+      context: context,
+      states: states,
+      selectedFallback: widget.defaults.iconColor(
+        selected: true,
+        active: active,
+      ),
+      unselectedFallback: widget.defaults.iconColor(
+        selected: false,
+        active: active,
+      ),
+    );
+    final foreground = CupertinoSidebarItemStyle.labelColorOf(
+      widget.itemStyle,
+      context: context,
+      states: states,
+      selectedFallback: widget.defaults.labelColor(
+        selected: true,
+        active: active,
+      ),
+      unselectedFallback: widget.defaults.labelColor(
+        selected: false,
+        active: active,
+      ),
+    );
     final textStyle = CupertinoTheme.of(context).textTheme.actionTextStyle
         .merge(widget.labelStyle)
         .copyWith(color: foreground);
@@ -160,6 +293,8 @@ class _SidebarCapsuleButtonState extends State<_SidebarCapsuleButton> {
     ).primaryColor.withValues(alpha: 0.8);
     return FocusableActionDetector(
       mouseCursor: SystemMouseCursors.click,
+      onFocusChange: _handleFocusChange,
+      onShowHoverHighlight: _handleHoverChange,
       onShowFocusHighlight: _handleShowFocusHighlight,
       actions: {
         ActivateIntent: CallbackAction<ActivateIntent>(
@@ -169,34 +304,49 @@ class _SidebarCapsuleButtonState extends State<_SidebarCapsuleButton> {
           },
         ),
       },
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onPressed,
-        onLongPressStart: (_) => _hold(true),
-        onLongPressEnd: (_) => _hold(false),
-        onLongPressCancel: () => _hold(false),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: widget.color,
-            border: _showFocusHighlight
-                ? Border.all(color: focusColor, width: 3)
-                : null,
-            borderRadius: BorderRadius.circular(_kSelectionHeight / 2),
-          ),
-          child: SizedBox(
-            height: _kSelectionHeight,
-            child: Padding(
-              padding: const EdgeInsetsDirectional.symmetric(horizontal: 12),
-              child: IconTheme(
-                data: IconThemeData(
-                  color: foreground,
-                  size: (textStyle.fontSize ?? 17) * 1.2,
-                ),
-                child: DefaultTextStyle(
-                  style: textStyle,
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: widget.child,
+      child: Builder(
+        builder: (focusContext) => Listener(
+          onPointerDown: (event) => _handlePointerDown(focusContext, event),
+          onPointerUp: (_) => _setPressed(false),
+          onPointerCancel: (_) => _setPressed(false),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (_) => _setPressed(true),
+            onTapUp: (_) => _setPressed(false),
+            onTapCancel: () => _setPressed(false),
+            onLongPressStart: (_) => _setPressed(true),
+            onLongPressEnd: (_) => _setPressed(false),
+            onLongPressCancel: () => _setPressed(false),
+            onTap: () {
+              _setPressed(false);
+              widget.onPressed();
+            },
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: background,
+                border: widget.defaults.showsFocusBorder && _showFocusHighlight
+                    ? Border.all(color: focusColor, width: 3)
+                    : null,
+                borderRadius: BorderRadius.circular(_kSelectionHeight / 2),
+              ),
+              child: SizedBox(
+                height: _kSelectionHeight,
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 12,
+                  ),
+                  child: IconTheme(
+                    data: IconThemeData(
+                      color: iconColor,
+                      size: (textStyle.fontSize ?? 17) * 1.2,
+                    ),
+                    child: DefaultTextStyle(
+                      style: textStyle,
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: widget.child,
+                      ),
+                    ),
                   ),
                 ),
               ),

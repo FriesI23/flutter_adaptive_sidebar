@@ -85,6 +85,12 @@ additional configuration, see the [example app](example/lib/main.dart).
 `CupertinoSidebar.edge` uses a neutral light/dark fill tuned to the iPadOS 27
 sidebar. Pass `backgroundColor` to override the surface with either a regular
 `Color` or a `CupertinoDynamicColor`; transparent colors retain backdrop blur.
+Its inactive page selection stays neutral, while the last interacted
+destination, focus, and press use the system accent with contrasting content.
+The retained interaction survives theme rebuilds. Use
+an outside tap to return it to the neutral selection. Use
+`CupertinoSidebarItemStyle` and its `WidgetStateProperty` colors for state-aware
+theme overrides.
 
 ## More examples
 

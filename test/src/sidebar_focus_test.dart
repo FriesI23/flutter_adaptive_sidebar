@@ -54,6 +54,38 @@ void main() {
     expect(controller.selection, const SidebarPrimarySelection(1));
   });
 
+  testWidgets('tap outside clears the retained edge interaction', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController();
+    addTearDown(controller.dispose);
+    await pumpSidebar(
+      tester,
+      controller: controller,
+      cupertino: true,
+      cupertinoStyle: CupertinoSidebarStyle.liquidEdge,
+    );
+    await tester.pumpAndSettle();
+
+    final destination = find.byKey(
+      const ValueKey('cupertino-sidebar-destination-0'),
+    );
+    await tester.tap(destination);
+    await tester.pumpAndSettle();
+
+    expect(controller.selection, const SidebarPrimarySelection(0));
+    expect(_focusNode(tester, destination).hasFocus, isTrue);
+    expect(_destinationFill(tester, destination).toARGB32(), 0xFF0081F6);
+
+    await tester.tap(find.text('Body'));
+    await tester.pumpAndSettle();
+
+    expect(_focusNode(tester, destination).hasFocus, isFalse);
+    expect(_destinationFill(tester, destination).toARGB32(), 0xFFD2D6DA);
+    expect(controller.selection, const SidebarPrimarySelection(0));
+  });
+
   testWidgets('tab reaches cupertino destinations on macOS', (tester) async {
     useLargeTestWindow(tester);
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
@@ -182,4 +214,11 @@ FocusNode _focusNode(WidgetTester tester, Finder destination) {
   final text = find.descendant(of: destination, matching: find.byType(Text));
   expect(text, findsWidgets);
   return Focus.of(tester.element(text.first));
+}
+
+Color _destinationFill(WidgetTester tester, Finder destination) {
+  final box = tester.widget<DecoratedBox>(
+    find.descendant(of: destination, matching: find.byType(DecoratedBox)),
+  );
+  return (box.decoration as BoxDecoration).color!;
 }

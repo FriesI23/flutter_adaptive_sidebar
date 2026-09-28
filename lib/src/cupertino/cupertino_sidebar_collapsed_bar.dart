@@ -95,10 +95,12 @@ class CupertinoSidebarCollapsedBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primaryColor = CupertinoTheme.of(context).primaryColor;
-    final highlight = CupertinoSidebarItemStyle.selectedColorOf(
+    final highlight = CupertinoSidebarItemStyle.backgroundColorOf(
       itemStyle,
-      primaryColor.withValues(alpha: 0.14),
-    );
+      context,
+      states: const {WidgetState.selected},
+      fallback: primaryColor.withValues(alpha: 0.14),
+    )!;
     return _DraggableCollapsedSelection(
       selectedIndex: selectedIndex,
       height: height,
@@ -148,9 +150,18 @@ class _CollapsedDestination extends StatelessWidget {
       CupertinoColors.label,
       context,
     );
-    final foregroundColor = CupertinoSidebarItemStyle.foregroundOf(
+    final states = <WidgetState>{if (selected) WidgetState.selected};
+    final foregroundColor = CupertinoSidebarItemStyle.labelColorOf(
       itemStyle,
-      selected: selected,
+      context: context,
+      states: states,
+      selectedFallback: primaryColor.withValues(alpha: 1),
+      unselectedFallback: labelColor.withValues(alpha: 1),
+    );
+    final iconColor = CupertinoSidebarItemStyle.iconColorOf(
+      itemStyle,
+      context: context,
+      states: states,
       selectedFallback: primaryColor.withValues(alpha: 1),
       unselectedFallback: labelColor.withValues(alpha: 1),
     );
@@ -189,7 +200,13 @@ class _CollapsedDestination extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (showIcon) ...[icon, const SizedBox(width: 6)],
+                    if (showIcon) ...[
+                      IconTheme.merge(
+                        data: IconThemeData(color: iconColor),
+                        child: icon,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
                     label,
                   ],
                 ),

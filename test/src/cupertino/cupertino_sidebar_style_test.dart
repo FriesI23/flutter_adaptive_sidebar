@@ -239,7 +239,10 @@ void main() {
       expect(color, expected);
       expect(color.a, closeTo(kCupertinoSidebarEdgeFillAlpha, 0.001));
       expect(Color.alphaBlend(color, backdrop).toARGB32(), argb);
-      expect(find.byType(BackdropFilter), findsOneWidget);
+      expect(
+        find.descendant(of: surface, matching: find.byType(BackdropFilter)),
+        findsOneWidget,
+      );
       return color;
     }
 
@@ -277,7 +280,7 @@ void main() {
     );
 
     expect(_surfaceColor(tester), backgroundColor);
-    expect(find.byType(BackdropFilter), findsNothing);
+    expect(_surfaceBackdropFilters(), findsNothing);
   });
 
   testWidgets('sidebar backgroundColor resolves Cupertino dynamic colors', (
@@ -307,12 +310,19 @@ void main() {
 
     await pump(Brightness.light);
     expect(_surfaceColor(tester).toARGB32(), 0x80123456);
-    expect(find.byType(BackdropFilter), findsOneWidget);
+    expect(_surfaceBackdropFilters(), findsOneWidget);
 
     await pump(Brightness.dark);
     expect(_surfaceColor(tester).toARGB32(), 0x80654321);
-    expect(find.byType(BackdropFilter), findsOneWidget);
+    expect(_surfaceBackdropFilters(), findsOneWidget);
   });
+}
+
+Finder _surfaceBackdropFilters() {
+  return find.descendant(
+    of: find.byKey(const ValueKey('cupertino-sidebar-surface')),
+    matching: find.byType(BackdropFilter),
+  );
 }
 
 Color _surfaceColor(WidgetTester tester) {

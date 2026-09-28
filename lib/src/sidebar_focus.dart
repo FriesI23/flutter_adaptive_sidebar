@@ -10,11 +10,15 @@ class SidebarFocusRegion extends StatelessWidget {
   const SidebarFocusRegion({
     super.key,
     required this.groupId,
+    this.onTapOutside,
     required this.child,
   });
 
   /// Identity shared by every focusable island of one sidebar.
   final Object groupId;
+
+  /// Called after a pointer tap outside this region group clears focus.
+  final VoidCallback? onTapOutside;
 
   /// Focusable sidebar controls.
   final Widget child;
@@ -23,7 +27,10 @@ class SidebarFocusRegion extends StatelessWidget {
   Widget build(BuildContext context) {
     return TapRegion(
       groupId: groupId,
-      onTapOutside: (_) => _unfocusIfInside(groupId),
+      onTapOutside: (_) {
+        _unfocusIfInside(groupId);
+        onTapOutside?.call();
+      },
       child: _SidebarFocusMarker(groupId: groupId, child: child),
     );
   }

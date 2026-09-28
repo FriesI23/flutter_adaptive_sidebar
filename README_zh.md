@@ -83,6 +83,9 @@ controller.toggleExpanded();
 `CupertinoSidebar.edge` 默认使用按 iPadOS 27 Sidebar 调整的中性亮色/暗色填充。
 可通过 `backgroundColor` 传入普通 `Color` 或 `CupertinoDynamicColor` 覆盖表面颜色；
 透明颜色会保留背景模糊效果。
+非当前交互的页面选中态保持中性色；最后交互的目标、聚焦和按下状态使用系统强调色
+及反色内容，并在主题重建后继续保持；实际点按 Sidebar 外部时恢复中性选中态。
+可通过 `CupertinoSidebarItemStyle` 的 `WidgetStateProperty` 颜色按状态覆盖主题配色。
 
 ## 更多示例
 
