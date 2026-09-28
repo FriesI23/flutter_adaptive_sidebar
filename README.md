@@ -82,22 +82,16 @@ controller.toggleExpanded();
 Dispose the controller when it is no longer needed. For responsive layouts and
 additional configuration, see the [example app](example/lib/main.dart).
 
-`CupertinoSidebar.edge` uses a neutral light/dark fill tuned to the iPadOS 27
-sidebar. Apps can provide a theme tint through
-`CupertinoSidebarThemeData.edgeBackgroundColor`; the package resolves dynamic
-colors and applies the edge glass opacity to both the expanded and collapsed
-surfaces. Pass `backgroundColor` to override the expanded and collapsed edge
-surface directly with either a regular `Color` or a `CupertinoDynamicColor`;
-transparent colors retain backdrop blur.
-Edge and liquid destinations derive their accent from
-`CupertinoTheme.primaryColor`. Edge keeps its distinct interaction treatment:
-the unfocused page selection uses a translucent accent, while the last
-interacted destination, focus, and press use an opaque accent with contrasting
-content. The retained interaction survives theme rebuilds; an outside tap
-returns it to the unfocused selection. The collapsed horizontal bar uses the
-same theme accent while retaining the edge capsule's surface, border, shadow,
-and opacity treatment. Use `CupertinoSidebarItemStyle` and its
-`WidgetStateProperty` colors for explicit state-aware overrides.
+## Cupertino appearance
+
+`CupertinoSidebar.edge` provides neutral light and dark surfaces inspired by
+the iPadOS 27 sidebar. Edge and Liquid destination accents follow
+`CupertinoTheme.primaryColor`, including the collapsed bar.
+
+Use `CupertinoSidebarThemeData.edgeBackgroundColor` in `ThemeData.extensions`
+to tint Edge surfaces throughout an app, or pass `backgroundColor` to customize
+one sidebar. Both accept dynamic colors, and transparent colors retain backdrop
+blur. For per-state destination colors, use `CupertinoSidebarItemStyle`.
 
 ## More examples
 
@@ -109,8 +103,9 @@ cd example
 fvm flutter run
 ```
 
-The example covers theme-color switching, responsive layouts, Material and Cupertino styles, custom
-navigation content, collapsed bars, and window-control obstruction insets.
+The example covers theme-color switching, responsive layouts, Material and
+Cupertino styles, custom navigation content, collapsed bars, and window-control
+obstruction insets.
 
 </details>
 

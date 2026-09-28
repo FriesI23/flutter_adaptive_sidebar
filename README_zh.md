@@ -80,16 +80,16 @@ controller.toggleExpanded();
 不再使用控制器时，请调用 `dispose()`。响应式布局和其他配置可参考
 [示例应用](example/lib/main.dart)。
 
-`CupertinoSidebar.edge` 默认使用按 iPadOS 27 Sidebar 调整的中性亮色/暗色填充。应用可通过
-`CupertinoSidebarThemeData.edgeBackgroundColor` 提供主题来源色；package 会统一解析动态颜色
-并应用 Edge 玻璃透明度，同时作用于展开和收起表面。也可通过 `backgroundColor` 传入普通
-`Color` 或 `CupertinoDynamicColor`，直接覆盖展开和收起的 Edge 表面；透明颜色会保留背景
-模糊效果。
-Edge 与 Liquid 的强调色都来源于 `CupertinoTheme.primaryColor`，但 Edge 保留自身的交互
-样式：失焦的页面选中态使用半透明强调色，最后交互的目标、聚焦和按下状态使用不透明强调色
-及反色内容，并在主题重建后继续保持；实际点按 Sidebar 外部时恢复失焦选中态。收起后的横向
-bar 同样跟随主题强调色，同时保留 Edge 胶囊原有的表面、边框、阴影和透明度处理。需要显式
-覆盖时，可使用 `CupertinoSidebarItemStyle` 及其 `WidgetStateProperty` 颜色。
+## Cupertino 外观
+
+`CupertinoSidebar.edge` 默认提供贴近 iPadOS 27 Sidebar 的中性亮色与暗色表面。
+Edge、Liquid 及折叠栏中的导航项强调色都会跟随
+`CupertinoTheme.primaryColor`。
+
+如需统一调整应用内的 Edge 表面，可在 `ThemeData.extensions` 中配置
+`CupertinoSidebarThemeData.edgeBackgroundColor`；只调整单个 Sidebar 时，则传入
+`backgroundColor`。两种方式都支持动态颜色，透明颜色仍会保留背景模糊效果。
+如需按交互状态定制导航项颜色，可使用 `CupertinoSidebarItemStyle`。
 
 ## 更多示例
 
