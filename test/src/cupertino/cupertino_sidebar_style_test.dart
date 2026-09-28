@@ -203,7 +203,7 @@ void main() {
     expect(tester.getTopLeft(find.text('Body')).dx, 200);
   });
 
-  testWidgets('liquidEdge fill uses the themed secondary background', (
+  testWidgets('liquidEdge fill matches the iPadOS 27 neutral background', (
     tester,
   ) async {
     useLargeTestWindow(tester);
@@ -224,7 +224,10 @@ void main() {
       );
     }
 
-    Future<void> expectSecondaryFill() async {
+    Future<Color> expectEdgeFill({
+      required Color backdrop,
+      required int argb,
+    }) async {
       final surface = find.byKey(const ValueKey('cupertino-sidebar-surface'));
       final context = tester.element(surface);
       final expected = CupertinoSidebarChrome.liquidEdge.fill.resolve(context);
@@ -234,33 +237,137 @@ void main() {
           )
           .color;
       expect(color, expected);
-      expect(color.a, lessThan(1));
-      expect(find.byType(BackdropFilter), findsOneWidget);
+      expect(color.a, closeTo(kCupertinoSidebarEdgeFillAlpha, 0.001));
+      expect(Color.alphaBlend(color, backdrop).toARGB32(), argb);
+      expect(
+        find.descendant(of: surface, matching: find.byType(BackdropFilter)),
+        findsOneWidget,
+      );
+      return color;
     }
 
     await pump(Brightness.light);
-    await expectSecondaryFill();
-    final light = tester
-        .widget<ColoredBox>(
-          find.descendant(
-            of: find.byKey(const ValueKey('cupertino-sidebar-surface')),
-            matching: find.byType(ColoredBox),
-          ),
-        )
-        .color;
+    final light = await expectEdgeFill(
+      backdrop: CupertinoColors.white,
+      argb: 0xFFE6EAEE,
+    );
 
     await pump(Brightness.dark);
-    await expectSecondaryFill();
-    final dark = tester
-        .widget<ColoredBox>(
-          find.descendant(
-            of: find.byKey(const ValueKey('cupertino-sidebar-surface')),
-            matching: find.byType(ColoredBox),
-          ),
-        )
-        .color;
+    final dark = await expectEdgeFill(
+      backdrop: CupertinoColors.black,
+      argb: 0xFF181D20,
+    );
     expect(dark, isNot(light));
   });
+
+  testWidgets('liquidEdge theme tint keeps the package glass opacity', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController();
+    addTearDown(controller.dispose);
+    const sourceColor = Color(0xFF123456);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          extensions: const [
+            CupertinoSidebarThemeData(edgeBackgroundColor: sourceColor),
+          ],
+        ),
+        home: CupertinoSidebar.edge(
+          controller: controller,
+          content: const SizedBox.expand(),
+          child: const SizedBox.expand(),
+        ),
+      ),
+    );
+
+    expect(
+      _surfaceColor(tester),
+      sourceColor.withValues(alpha: kCupertinoSidebarEdgeFillAlpha),
+    );
+  });
+
+  testWidgets('sidebar backgroundColor keeps a plain color unchanged', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController();
+    addTearDown(controller.dispose);
+    const backgroundColor = Color(0xFF123456);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          extensions: const [
+            CupertinoSidebarThemeData(edgeBackgroundColor: Color(0xFFABCDEF)),
+          ],
+        ),
+        home: CupertinoSidebar.edge(
+          controller: controller,
+          backgroundColor: backgroundColor,
+          content: const SizedBox.expand(),
+          child: const SizedBox.expand(),
+        ),
+      ),
+    );
+
+    expect(_surfaceColor(tester), backgroundColor);
+    expect(_surfaceBackdropFilters(), findsNothing);
+  });
+
+  testWidgets('sidebar backgroundColor resolves Cupertino dynamic colors', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController();
+    addTearDown(controller.dispose);
+    const backgroundColor = CupertinoDynamicColor.withBrightness(
+      color: Color(0x80123456),
+      darkColor: Color(0x80654321),
+    );
+
+    Future<void> pump(Brightness brightness) {
+      return tester.pumpWidget(
+        CupertinoApp(
+          theme: CupertinoThemeData(brightness: brightness),
+          home: CupertinoSidebar.edge(
+            controller: controller,
+            backgroundColor: backgroundColor,
+            content: const SizedBox.expand(),
+            child: const SizedBox.expand(),
+          ),
+        ),
+      );
+    }
+
+    await pump(Brightness.light);
+    expect(_surfaceColor(tester).toARGB32(), 0x80123456);
+    expect(_surfaceBackdropFilters(), findsOneWidget);
+
+    await pump(Brightness.dark);
+    expect(_surfaceColor(tester).toARGB32(), 0x80654321);
+    expect(_surfaceBackdropFilters(), findsOneWidget);
+  });
+}
+
+Finder _surfaceBackdropFilters() {
+  return find.descendant(
+    of: find.byKey(const ValueKey('cupertino-sidebar-surface')),
+    matching: find.byType(BackdropFilter),
+  );
+}
+
+Color _surfaceColor(WidgetTester tester) {
+  return tester
+      .widget<ColoredBox>(
+        find.descendant(
+          of: find.byKey(const ValueKey('cupertino-sidebar-surface')),
+          matching: find.byType(ColoredBox),
+        ),
+      )
+      .color;
 }
 
 Future<void> _pumpStyle(

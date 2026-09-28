@@ -18,13 +18,27 @@ class AdaptiveSidebarExampleApp extends StatefulWidget {
 
 class _AdaptiveSidebarExampleAppState extends State<AdaptiveSidebarExampleApp> {
   ThemeMode _themeMode = ThemeMode.system;
+  ExampleThemeColor _themeColor = ExampleThemeColor.system;
 
   ThemeData _theme(Brightness brightness) {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: Colors.teal,
+      seedColor: _themeColor.color,
       brightness: brightness,
     );
-    return ThemeData(colorScheme: colorScheme);
+    return ThemeData(
+      colorScheme: colorScheme,
+      cupertinoOverrideTheme: CupertinoThemeData(
+        brightness: brightness,
+        primaryColor: _themeColor.color,
+      ),
+      extensions: [
+        CupertinoSidebarThemeData(
+          edgeBackgroundColor: _themeColor == ExampleThemeColor.system
+              ? null
+              : colorScheme.surfaceContainer,
+        ),
+      ],
+    );
   }
 
   @override
@@ -38,7 +52,9 @@ class _AdaptiveSidebarExampleAppState extends State<AdaptiveSidebarExampleApp> {
         child: AdaptiveSidebarExample(
           cupertino: widget.cupertino,
           themeMode: _themeMode,
+          themeColor: _themeColor,
           onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
+          onThemeColorChanged: (color) => setState(() => _themeColor = color),
         ),
       ),
     );
@@ -52,6 +68,21 @@ enum _ExpansionMode { automatic, collapsed, expanded }
 enum _CollapsedBarTransition { drop, fade }
 
 enum _ToolbarTopInsetMode { automatic, unified, custom }
+
+/// Theme colors demonstrated by the Cupertino sidebar example.
+enum ExampleThemeColor {
+  system('Default', CupertinoColors.systemBlue),
+  purple('Purple', CupertinoColors.systemPurple),
+  teal('Teal', CupertinoColors.systemTeal),
+  orange('Orange', CupertinoColors.systemOrange);
+
+  const ExampleThemeColor(this.label, this.color);
+
+  final String label;
+  final Color color;
+
+  ExampleThemeColor get next => values[(index + 1) % values.length];
+}
 
 PreferredSizeWidget? _navigationBarBottomFor(
   CupertinoSidebarToolbarGeometry geometry,
@@ -114,12 +145,25 @@ _SidebarStyle _platformSidebarStyle() {
 }
 
 class _ExampleBackground extends StatelessWidget {
-  const _ExampleBackground({required this.child});
+  const _ExampleBackground({required this.themeColor, required this.child});
 
+  final ExampleThemeColor themeColor;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
+    if (themeColor == ExampleThemeColor.system) {
+      return DecoratedBox(
+        key: const ValueKey('example-background'),
+        decoration: BoxDecoration(
+          color: CupertinoDynamicColor.resolve(
+            CupertinoColors.systemBackground,
+            context,
+          ),
+        ),
+        child: child,
+      );
+    }
     final colorScheme = Theme.of(context).colorScheme;
     final surface = colorScheme.surface;
     return DecoratedBox(
@@ -178,6 +222,7 @@ class _ExampleBody extends StatelessWidget {
     required this.customPageTitle,
     required this.itemCount,
     required this.themeMode,
+    required this.themeColor,
     required this.textDirection,
     required this.settings,
     required this.toolbarGeometry,
@@ -189,6 +234,7 @@ class _ExampleBody extends StatelessWidget {
     required this.onToggleDirection,
     required this.onModeChanged,
     required this.onThemeModeChanged,
+    required this.onThemeColorChanged,
     required this.onPreferredWidthChanged,
     required this.onMinimumWidthChanged,
     required this.onMaximumWidthChanged,
@@ -222,6 +268,7 @@ class _ExampleBody extends StatelessWidget {
   final String? customPageTitle;
   final int itemCount;
   final ThemeMode themeMode;
+  final ExampleThemeColor themeColor;
   final TextDirection textDirection;
   final _SettingsValues settings;
   final CupertinoSidebarToolbarGeometry toolbarGeometry;
@@ -233,6 +280,7 @@ class _ExampleBody extends StatelessWidget {
   final VoidCallback onToggleDirection;
   final ValueChanged<_ExpansionMode> onModeChanged;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final ValueChanged<ExampleThemeColor> onThemeColorChanged;
   final ValueChanged<double> onPreferredWidthChanged;
   final ValueChanged<double> onMinimumWidthChanged;
   final ValueChanged<double> onMaximumWidthChanged;
@@ -305,6 +353,10 @@ class _ExampleBody extends StatelessWidget {
                         ? CupertinoSidebarStyle.liquidEdge
                         : CupertinoSidebarStyle.liquid,
                   ),
+                ),
+                _ThemeColorButton(
+                  color: themeColor,
+                  onChanged: onThemeColorChanged,
                 ),
                 CupertinoButton(
                   key: const ValueKey('style-button'),
@@ -414,6 +466,28 @@ class _ExampleBody extends StatelessWidget {
         ),
       },
     ];
+  }
+}
+
+class _ThemeColorButton extends StatelessWidget {
+  const _ThemeColorButton({required this.color, required this.onChanged});
+
+  final ExampleThemeColor color;
+  final ValueChanged<ExampleThemeColor> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedColor = CupertinoDynamicColor.resolve(color.color, context);
+    return Semantics(
+      label: 'Theme color: ${color.label}',
+      button: true,
+      child: CupertinoButton(
+        key: const ValueKey('theme-color-button'),
+        padding: EdgeInsets.zero,
+        onPressed: () => onChanged(color.next),
+        child: Icon(CupertinoIcons.circle_fill, color: resolvedColor),
+      ),
+    );
   }
 }
 

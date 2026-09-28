@@ -8,6 +8,14 @@ const double kCupertinoSidebarLiquidFillAlpha = 0.7;
 /// Opacity of [CupertinoSidebarChrome.liquidEdge]'s glass fill.
 const double kCupertinoSidebarEdgeFillAlpha = 0.9;
 
+// Tuned from composited iPadOS 27.0 Files sidebar screenshots. Apple does not
+// publish an equivalent semantic color for custom Flutter chrome.
+const _cupertinoSidebarEdgeFillColor = CupertinoDynamicColor.withBrightness(
+  debugLabel: 'cupertinoSidebarEdgeFill',
+  color: Color(0xFFE3E8EC),
+  darkColor: Color(0xFF1B2024),
+);
+
 /// Glass treatment for a Cupertino sidebar.
 ///
 /// The package does not choose this from the platform. [liquid] is the
@@ -22,6 +30,35 @@ enum CupertinoSidebarStyle {
   liquidEdge,
 }
 
+/// Internal inherited style shared by a sidebar and its supplied content.
+///
+/// This type is intentionally omitted from the package entrypoint. Public
+/// consumers resolve the value through `CupertinoSidebar.styleOf`.
+class CupertinoSidebarStyleScope extends InheritedWidget {
+  /// Creates a style scope.
+  const CupertinoSidebarStyleScope({
+    super.key,
+    required this.style,
+    required super.child,
+  });
+
+  /// The active sidebar presentation.
+  final CupertinoSidebarStyle style;
+
+  /// Resolves the closest style, defaulting to the established liquid preset.
+  static CupertinoSidebarStyle styleOf(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<CupertinoSidebarStyleScope>()
+            ?.style ??
+        CupertinoSidebarStyle.liquid;
+  }
+
+  @override
+  bool updateShouldNotify(CupertinoSidebarStyleScope oldWidget) {
+    return style != oldWidget.style;
+  }
+}
+
 /// Theme color and opacity for a sidebar glass fill.
 ///
 /// [color] is resolved with the current brightness, then [alpha] caps its
@@ -32,14 +69,18 @@ class CupertinoSidebarFill {
   const CupertinoSidebarFill({this.color, required this.alpha});
 
   /// Source color. Null uses [CupertinoThemeData.barBackgroundColor].
-  final CupertinoDynamicColor? color;
+  final Color? color;
 
   /// Maximum opacity applied after [color] is resolved.
   final double alpha;
 
   /// The fill for the current theme brightness.
-  Color resolve(BuildContext context) {
-    final source = color ?? CupertinoTheme.of(context).barBackgroundColor;
+  ///
+  /// [sourceColor] lets an app theme replace the preset tint while preserving
+  /// this fill's opacity treatment.
+  Color resolve(BuildContext context, {Color? sourceColor}) {
+    final source =
+        sourceColor ?? color ?? CupertinoTheme.of(context).barBackgroundColor;
     final resolved = CupertinoDynamicColor.resolve(source, context);
     return resolved.withValues(alpha: math.min(resolved.a, alpha));
   }
@@ -115,8 +156,8 @@ class CupertinoSidebarChrome {
 
   /// Glass column that meets the window edge.
   ///
-  /// The page starts at the inner edge. The fill is the themed secondary
-  /// background, and [border] draws the separator on the inner edge.
+  /// The page starts at the inner edge. The fill matches the neutral iPadOS 27
+  /// sidebar material, and [border] draws the separator on the inner edge.
   static const CupertinoSidebarChrome liquidEdge = CupertinoSidebarChrome(
     surfaceMargin: 0,
     borderRadius: BorderRadius.zero,
@@ -124,7 +165,7 @@ class CupertinoSidebarChrome {
     resizeHandleCornerInset: 0,
     flushToWindowEdge: true,
     fill: CupertinoSidebarFill(
-      color: CupertinoColors.secondarySystemBackground,
+      color: _cupertinoSidebarEdgeFillColor,
       alpha: kCupertinoSidebarEdgeFillAlpha,
     ),
     blurSigma: 10,

@@ -80,6 +80,17 @@ controller.toggleExpanded();
 不再使用控制器时，请调用 `dispose()`。响应式布局和其他配置可参考
 [示例应用](example/lib/main.dart)。
 
+## Cupertino 外观
+
+`CupertinoSidebar.edge` 默认提供贴近 iPadOS 27 Sidebar 的中性亮色与暗色表面。
+Edge、Liquid 及折叠栏中的导航项强调色都会跟随
+`CupertinoTheme.primaryColor`。
+
+如需统一调整应用内的 Edge 表面，可在 `ThemeData.extensions` 中配置
+`CupertinoSidebarThemeData.edgeBackgroundColor`；只调整单个 Sidebar 时，则传入
+`backgroundColor`。两种方式都支持动态颜色，透明颜色仍会保留背景模糊效果。
+如需按交互状态定制导航项颜色，可使用 `CupertinoSidebarItemStyle`。
+
 ## 更多示例
 
 <details>
@@ -90,8 +101,8 @@ cd example
 fvm flutter run
 ```
 
-示例应用包含响应式布局、Material 与 Cupertino 样式、自定义导航内容、折叠栏和
-窗口控件避让。
+示例应用包含默认及多种主题色切换、响应式布局、Material 与 Cupertino 样式、
+自定义导航内容、折叠栏和窗口控件避让。
 
 </details>
 

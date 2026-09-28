@@ -14,7 +14,9 @@ import '../sidebar_leading_scope.dart';
 import 'cupertino_sidebar_button.dart';
 import 'cupertino_sidebar_chrome.dart';
 import 'cupertino_sidebar_collapsed_bar.dart';
+import 'cupertino_sidebar_interaction_scope.dart';
 import 'cupertino_sidebar_panel.dart';
+import 'cupertino_sidebar_theme_data.dart';
 import 'cupertino_sidebar_toolbar_geometry.dart';
 
 /// Opacity of the collapsed bar's glass fill.
@@ -107,7 +109,7 @@ class CupertinoSidebar extends StatefulWidget {
   ///
   /// Selected rows use a translucent primary tint. Pass [style] only to
   /// override that preset. [CupertinoSidebar.edge] is the flush column with
-  /// the solid contrasting selection.
+  /// retained active and unfocused selection states.
   const CupertinoSidebar({
     super.key,
     required this.controller,
@@ -130,6 +132,7 @@ class CupertinoSidebar extends StatefulWidget {
     this.expandLabel,
     this.collapseLabel,
     this.tooltipBuilder,
+    this.backgroundColor,
     this.scaffoldBackgroundColor,
   }) : // Keep the public override name while storing its nullable const value.
        // ignore: prefer_initializing_formals
@@ -137,8 +140,9 @@ class CupertinoSidebar extends StatefulWidget {
 
   /// Creates a sidebar flush with the window edge.
   ///
-  /// The glass is [CupertinoSidebarStyle.liquidEdge]. Selected rows inside
-  /// [content] use a solid primary fill and the contrasting label color.
+  /// The glass is [CupertinoSidebarStyle.liquidEdge]. Destinations inside
+  /// [content] derive their unfocused and retained-active colors from the
+  /// current [CupertinoThemeData.primaryColor].
   const CupertinoSidebar.edge({
     Key? key,
     required AdaptiveNavigationController controller,
@@ -162,6 +166,7 @@ class CupertinoSidebar extends StatefulWidget {
     String? expandLabel,
     String? collapseLabel,
     NavigationTooltipBuilder? tooltipBuilder,
+    Color? backgroundColor,
     Color? scaffoldBackgroundColor,
   }) : this(
          key: key,
@@ -183,15 +188,21 @@ class CupertinoSidebar extends StatefulWidget {
          expandLabel: expandLabel,
          collapseLabel: collapseLabel,
          tooltipBuilder: tooltipBuilder,
+         backgroundColor: backgroundColor,
          scaffoldBackgroundColor: scaffoldBackgroundColor,
        );
 
-  /// Whether selected rows in [context] use the solid contrasting fill.
+  /// Whether selected rows in [context] use the edge interaction treatment.
   ///
   /// True inside [CupertinoSidebar.edge], or a sidebar whose [style] is
   /// [CupertinoSidebarStyle.liquidEdge]. False otherwise.
   static bool filledSelectionOf(BuildContext context) {
-    return _CupertinoSidebarMode.filledOf(context);
+    return styleOf(context) == CupertinoSidebarStyle.liquidEdge;
+  }
+
+  /// The sidebar presentation inherited by descendants in [context].
+  static CupertinoSidebarStyle styleOf(BuildContext context) {
+    return CupertinoSidebarStyleScope.styleOf(context);
   }
 
   /// Shared selection, visibility, and width.
@@ -277,13 +288,14 @@ class CupertinoSidebar extends StatefulWidget {
   /// Automatic and manually resizable panel-width policy.
   final SideNavigationExtent extent;
 
-  /// Glass treatment of the expanded panel, and the selection fill.
+  /// Glass treatment of the expanded panel, and its interaction behavior.
   ///
   /// Defaults to [CupertinoSidebarStyle.liquid], the inset rounded surface
   /// with a translucent selection. [CupertinoSidebarStyle.liquidEdge], also
   /// selected by [CupertinoSidebar.edge], draws a column that meets the
-  /// window edge and a solid contrasting selection. The package does not
-  /// choose this from the platform.
+  /// window edge and retains the last interacted destination until an outside
+  /// tap. Both styles derive destination colors from the current Cupertino
+  /// theme. The package does not choose this from the platform.
   final CupertinoSidebarStyle style;
 
   /// Optional visual displayed inside the resize target.
@@ -297,6 +309,13 @@ class CupertinoSidebar extends StatefulWidget {
 
   /// Optional tooltip wrapper for the show and hide button.
   final NavigationTooltipBuilder? tooltipBuilder;
+
+  /// Background color of the expanded sidebar surface.
+  ///
+  /// A [CupertinoDynamicColor] is resolved against the current context. When
+  /// null, the selected [style] supplies its default fill. Transparent colors
+  /// retain the style's backdrop blur; opaque colors skip it.
+  final Color? backgroundColor;
 
   /// Shared scaffold color for the backdrop and the content beside the sidebar.
   ///
@@ -353,6 +372,7 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
   );
   final Object _focusGroup = Object();
   double _edgeDragDistance = 0;
+  int _outsideTapGeneration = 0;
 
   AdaptiveNavigationController get _controller => widget.controller;
 
@@ -474,6 +494,11 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
 
   void _handleEdgeDragCancel() => _edgeDragDistance = 0;
 
+  void _handleTapOutside() {
+    if (widget.style != CupertinoSidebarStyle.liquidEdge) return;
+    setState(() => _outsideTapGeneration += 1);
+  }
+
   @override
   Widget build(BuildContext context) {
     final expandNavigationLabel =
@@ -548,6 +573,15 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
     final collapsedBarGlass = barBackground.withValues(
       alpha: math.min(barBackground.a, kCupertinoSidebarCollapsedBarGlassAlpha),
     );
+    final themedEdgeBackground =
+        widget.style == CupertinoSidebarStyle.liquidEdge
+        ? CupertinoSidebarThemeData.of(context).edgeBackgroundColor
+        : null;
+    final sidebarBackground =
+        widget.backgroundColor ??
+        (themedEdgeBackground == null
+            ? null
+            : chrome.fill.resolve(context, sourceColor: themedEdgeBackground));
     final content = CupertinoTheme(
       data: CupertinoTheme.of(context).copyWith(
         scaffoldBackgroundColor: sharedBackground,
@@ -595,25 +629,34 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
         final toggleInCapsule = collapsedBarEnabled && expandedProgress == 0;
         final capsule = collapsedBar == null
             ? null
-            : CupertinoSidebarCollapsedCapsule(
-                backgroundColor: collapsedBarGlass,
-                minimumBodyExtent: widget.collapsedBarMinimumDestinationExtent,
-                height: widget.collapsedBarHeight,
-                showSeparator: widget.collapsedBarSeparator,
-                leading: toggleInCapsule
-                    ? CupertinoSidebarButton(
-                        focusNode: _toggleFocusNode,
-                        label: expandNavigationLabel,
-                        onPressed: _controller.toggleExpanded,
-                        buttonKey: const ValueKey('cupertino-sidebar-toggle'),
-                        tooltipBuilder: widget.tooltipBuilder,
-                        extent: widget.collapsedBarHeight,
-                        iconSize: _kCollapsedBarGlyphSize,
-                      )
-                    : _CollapsedTogglePlaceholder(
-                        extent: widget.collapsedBarHeight,
-                      ),
-                child: collapsedBar,
+            : CupertinoSidebarStyleScope(
+                style: widget.style,
+                child: CupertinoSidebarCollapsedCapsule(
+                  style: widget.style,
+                  backgroundColor:
+                      widget.style == CupertinoSidebarStyle.liquidEdge &&
+                          sidebarBackground != null
+                      ? sidebarBackground
+                      : collapsedBarGlass,
+                  minimumBodyExtent:
+                      widget.collapsedBarMinimumDestinationExtent,
+                  height: widget.collapsedBarHeight,
+                  showSeparator: widget.collapsedBarSeparator,
+                  leading: toggleInCapsule
+                      ? CupertinoSidebarButton(
+                          focusNode: _toggleFocusNode,
+                          label: expandNavigationLabel,
+                          onPressed: _controller.toggleExpanded,
+                          buttonKey: const ValueKey('cupertino-sidebar-toggle'),
+                          tooltipBuilder: widget.tooltipBuilder,
+                          extent: widget.collapsedBarHeight,
+                          iconSize: _kCollapsedBarGlyphSize,
+                        )
+                      : _CollapsedTogglePlaceholder(
+                          extent: widget.collapsedBarHeight,
+                        ),
+                  child: collapsedBar,
+                ),
               );
         final branch = _CupertinoSidebarBranch(
           occupiedSpan:
@@ -678,16 +721,21 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
             if (panelActive)
               SidebarFocusRegion(
                 groupId: _focusGroup,
+                onTapOutside: _handleTapOutside,
                 child: _CupertinoSidebarAnimatedPanel(
                   progress: expandedProgress,
                   chrome: chrome,
                   child: CupertinoSidebarPanel(
                     chrome: chrome,
                     width: panelWidth,
+                    backgroundColor: sidebarBackground,
                     contentActive: expandedProgress == 1,
-                    content: _CupertinoSidebarMode(
-                      filled: widget.style == CupertinoSidebarStyle.liquidEdge,
-                      child: widget.content,
+                    content: CupertinoSidebarInteractionScope(
+                      outsideTapGeneration: _outsideTapGeneration,
+                      child: CupertinoSidebarStyleScope(
+                        style: widget.style,
+                        child: widget.content,
+                      ),
                     ),
                     dragging: _controller.resizing,
                     dragHandleBuilder: widget.dragHandleBuilder,
@@ -1051,23 +1099,6 @@ class _CollapsedTogglePlaceholder extends StatelessWidget {
         color: CupertinoTheme.of(context).primaryColor,
       ),
     );
-  }
-}
-
-class _CupertinoSidebarMode extends InheritedWidget {
-  const _CupertinoSidebarMode({required this.filled, required super.child});
-
-  final bool filled;
-
-  static bool filledOf(BuildContext context) {
-    final scope = context
-        .dependOnInheritedWidgetOfExactType<_CupertinoSidebarMode>();
-    return scope?.filled ?? false;
-  }
-
-  @override
-  bool updateShouldNotify(_CupertinoSidebarMode oldWidget) {
-    return filled != oldWidget.filled;
   }
 }
 

@@ -794,6 +794,173 @@ void main() {
     );
   });
 
+  testWidgets('edge collapsed bar uses the composed theme tint', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController(initialExpanded: false);
+    addTearDown(controller.dispose);
+    const sourceColor = Color(0xFF123456);
+
+    await tester.pumpWidget(
+      collapsedBarHost(
+        controller: controller,
+        style: CupertinoSidebarStyle.liquidEdge,
+        materialTheme: ThemeData(
+          extensions: const [
+            CupertinoSidebarThemeData(edgeBackgroundColor: sourceColor),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final capsule = find.byKey(
+      const ValueKey('cupertino-sidebar-collapsed-capsule'),
+    );
+    final capsuleColor = tester.widget<ColoredBox>(
+      find.descendant(of: capsule, matching: find.byType(ColoredBox)).first,
+    );
+    expect(capsuleColor.color, sourceColor.withValues(alpha: 0.45));
+  });
+
+  for (final style in CupertinoSidebarStyle.values) {
+    testWidgets('${style.name} collapsed bar follows the Cupertino tint', (
+      tester,
+    ) async {
+      useLargeTestWindow(tester);
+      final controller = AdaptiveNavigationController(initialExpanded: false);
+      addTearDown(controller.dispose);
+      const primaryColor = CupertinoColors.systemPurple;
+
+      await tester.pumpWidget(
+        collapsedBarHost(
+          controller: controller,
+          style: style,
+          theme: const CupertinoThemeData(primaryColor: primaryColor),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final highlight = tester.widget<DecoratedBox>(
+        find.byKey(
+          const ValueKey('cupertino-sidebar-collapsed-selection-highlight'),
+        ),
+      );
+      expect(
+        (highlight.decoration as BoxDecoration).color,
+        primaryColor.withValues(alpha: 0.14),
+      );
+
+      final context = tester.element(find.text('Home'));
+      expect(
+        tester.widget<Text>(find.text('Home')).style?.color,
+        primaryColor.withValues(alpha: 1),
+      );
+      expect(
+        tester.widget<Text>(find.text('Search')).style?.color?.toARGB32(),
+        CupertinoDynamicColor.resolve(
+          CupertinoColors.label,
+          context,
+        ).withValues(alpha: 1).toARGB32(),
+      );
+
+      final capsule = find.byKey(
+        const ValueKey('cupertino-sidebar-collapsed-capsule'),
+      );
+      final capsuleColor = tester.widget<ColoredBox>(
+        find.descendant(of: capsule, matching: find.byType(ColoredBox)).first,
+      );
+      expect(capsuleColor.color.a, lessThanOrEqualTo(0.45));
+      final hasBorder = tester
+          .widgetList<DecoratedBox>(
+            find.descendant(of: capsule, matching: find.byType(DecoratedBox)),
+          )
+          .map((box) => box.decoration)
+          .whereType<BoxDecoration>()
+          .any((decoration) => decoration.border != null);
+      expect(
+        hasBorder,
+        style == CupertinoSidebarStyle.liquidEdge,
+        reason: '${style.name} keeps its own capsule treatment',
+      );
+    });
+  }
+
+  testWidgets('collapsed bar follows a dynamic parent style change', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController(initialExpanded: false);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(collapsedBarHost(controller: controller));
+    await tester.pumpAndSettle();
+
+    DecoratedBox highlight() => tester.widget<DecoratedBox>(
+      find.byKey(
+        const ValueKey('cupertino-sidebar-collapsed-selection-highlight'),
+      ),
+    );
+    expect(
+      (highlight().decoration as BoxDecoration).color,
+      CupertinoTheme.of(
+        tester.element(find.text('Home')),
+      ).primaryColor.withValues(alpha: 0.14),
+    );
+
+    await tester.pumpWidget(
+      collapsedBarHost(
+        controller: controller,
+        style: CupertinoSidebarStyle.liquidEdge,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      (highlight().decoration as BoxDecoration).color,
+      CupertinoTheme.of(
+        tester.element(find.text('Home')),
+      ).primaryColor.withValues(alpha: 0.14),
+    );
+  });
+
+  testWidgets('edge collapsed bar accepts an independent item style', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController(initialExpanded: false);
+    addTearDown(controller.dispose);
+    const selected = Color(0xFF123456);
+    const selectedForeground = Color(0xFF654321);
+    const foreground = Color(0xFF345612);
+
+    await tester.pumpWidget(
+      collapsedBarHost(
+        controller: controller,
+        style: CupertinoSidebarStyle.liquidEdge,
+        collapsedBarItemStyle: const CupertinoSidebarItemStyle(
+          selectedColor: selected,
+          selectedForegroundColor: selectedForeground,
+          foregroundColor: foreground,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final highlight = tester.widget<DecoratedBox>(
+      find.byKey(
+        const ValueKey('cupertino-sidebar-collapsed-selection-highlight'),
+      ),
+    );
+    expect((highlight.decoration as BoxDecoration).color, selected);
+    expect(
+      tester.widget<Text>(find.text('Home')).style?.color,
+      selectedForeground,
+    );
+    expect(tester.widget<Text>(find.text('Search')).style?.color, foreground);
+  });
+
   testWidgets('collapsed bar selects nothing when selectedIndex is null', (
     tester,
   ) async {
@@ -894,6 +1061,7 @@ void main() {
 
 Widget collapsedBarHost({
   required AdaptiveNavigationController controller,
+  ThemeData? materialTheme,
   CupertinoThemeData theme = const CupertinoThemeData(),
   CupertinoSidebarCollapsedBarController? collapsedBarController,
   CupertinoSidebarCollapsedBarPlacement collapsedBarPlacement =
@@ -902,6 +1070,8 @@ Widget collapsedBarHost({
   TextDirection textDirection = TextDirection.ltr,
   CupertinoSidebarCollapsedBarTransitionBuilder? transitionBuilder,
   CupertinoSidebarStyle style = CupertinoSidebarStyle.liquid,
+  Color? backgroundColor,
+  CupertinoSidebarItemStyle? collapsedBarItemStyle,
   CupertinoSidebarToolbarGeometry toolbarGeometry =
       CupertinoSidebarToolbarGeometry.standard,
   double? minimumDestinationExtent,
@@ -914,6 +1084,7 @@ Widget collapsedBarHost({
   final effectiveCollapsedBarHeight =
       collapsedBarHeight ?? toolbarGeometry.collapsedBarHeight;
   return MaterialApp(
+    theme: materialTheme,
     home: Directionality(
       textDirection: textDirection,
       child: CupertinoTheme(
@@ -926,6 +1097,7 @@ Widget collapsedBarHost({
               collapsedBarController: collapsedBarController,
               collapsedBarPlacement: collapsedBarPlacement,
               style: style,
+              backgroundColor: backgroundColor,
               toolbarGeometry: toolbarGeometry,
               content: const SizedBox.shrink(),
               collapsedBarHeight: collapsedBarHeight,
@@ -942,6 +1114,7 @@ Widget collapsedBarHost({
                     ? controller.selection.primaryIndex
                     : selectedIndex,
                 showIcons: showIcons,
+                itemStyle: collapsedBarItemStyle,
                 height: effectiveCollapsedBarHeight,
                 onDestinationSelected: (index) =>
                     controller.select(SidebarPrimarySelection(index)),

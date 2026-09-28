@@ -82,6 +82,17 @@ controller.toggleExpanded();
 Dispose the controller when it is no longer needed. For responsive layouts and
 additional configuration, see the [example app](example/lib/main.dart).
 
+## Cupertino appearance
+
+`CupertinoSidebar.edge` provides neutral light and dark surfaces inspired by
+the iPadOS 27 sidebar. Edge and Liquid destination accents follow
+`CupertinoTheme.primaryColor`, including the collapsed bar.
+
+Use `CupertinoSidebarThemeData.edgeBackgroundColor` in `ThemeData.extensions`
+to tint Edge surfaces throughout an app, or pass `backgroundColor` to customize
+one sidebar. Both accept dynamic colors, and transparent colors retain backdrop
+blur. For per-state destination colors, use `CupertinoSidebarItemStyle`.
+
 ## More examples
 
 <details>
@@ -92,8 +103,9 @@ cd example
 fvm flutter run
 ```
 
-The example covers responsive layouts, Material and Cupertino styles, custom
-navigation content, collapsed bars, and window-control obstruction insets.
+The example covers theme-color switching, responsive layouts, Material and
+Cupertino styles, custom navigation content, collapsed bars, and window-control
+obstruction insets.
 
 </details>
 

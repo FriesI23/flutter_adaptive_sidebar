@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -40,57 +41,141 @@ void main() {
     expect(presses, 1);
   });
 
-  testWidgets('liquid selection stays a translucent primary tint', (
+  for (final edge in [false, true]) {
+    testWidgets(
+      '${edge ? 'edge' : 'liquid'} selection follows the Cupertino tint',
+      (tester) async {
+        useLargeTestWindow(tester);
+        final controller = AdaptiveNavigationController();
+        addTearDown(controller.dispose);
+        const primaryColor = CupertinoColors.systemPurple;
+        await _pumpSelection(
+          tester,
+          controller: controller,
+          edge: edge,
+          primaryColor: primaryColor,
+        );
+
+        expect(_fill(tester), primaryColor.withValues(alpha: 0.14));
+        final context = tester.element(
+          find.byType(CupertinoSidebarDestination),
+        );
+        expect(
+          _labelColor(tester),
+          edge
+              ? CupertinoDynamicColor.resolve(
+                  CupertinoColors.label,
+                  context,
+                ).withValues(alpha: 1)
+              : primaryColor.withValues(alpha: 1),
+        );
+        expect(_iconColor(tester), primaryColor.withValues(alpha: 1));
+        _expectCapsule(tester);
+      },
+    );
+  }
+
+  testWidgets('focused edge selection uses the theme tint and white content', (
     tester,
   ) async {
     useLargeTestWindow(tester);
     final controller = AdaptiveNavigationController();
     addTearDown(controller.dispose);
-    await _pumpSelection(tester, controller: controller, edge: false);
+    const primaryColor = CupertinoColors.systemPurple;
+    await _pumpSelection(
+      tester,
+      controller: controller,
+      edge: true,
+      primaryColor: primaryColor,
+    );
 
-    final primary = CupertinoTheme.of(
-      tester.element(find.byType(CupertinoSidebarDestination)),
-    ).primaryColor;
-    expect(_fill(tester), primary.withValues(alpha: 0.14));
-    expect(_labelColor(tester), primary.withValues(alpha: 1));
-    _expectCapsule(tester);
+    Focus.of(tester.element(find.text('Home'))).requestFocus();
+    await tester.pump();
+
+    expect(_fill(tester), primaryColor.withValues(alpha: 1));
+    expect(_labelColor(tester), CupertinoColors.white);
+    expect(_iconColor(tester), CupertinoColors.white);
+    final decoration =
+        tester
+                .widget<DecoratedBox>(
+                  find.descendant(
+                    of: find.byType(CupertinoSidebarDestination),
+                    matching: find.byType(DecoratedBox),
+                  ),
+                )
+                .decoration
+            as BoxDecoration;
+    expect(decoration.border, isNull);
   });
 
-  testWidgets('edge selection uses a solid contrasting fill', (tester) async {
+  testWidgets('dark edge keeps unfocused and active theme-tint states', (
+    tester,
+  ) async {
     useLargeTestWindow(tester);
     final controller = AdaptiveNavigationController();
     addTearDown(controller.dispose);
-    await _pumpSelection(tester, controller: controller, edge: true);
+    await _pumpSelection(
+      tester,
+      controller: controller,
+      edge: true,
+      brightness: Brightness.dark,
+    );
 
-    final theme = CupertinoTheme.of(
-      tester.element(find.byType(CupertinoSidebarDestination)),
-    );
-    expect(_fill(tester), theme.primaryColor);
-    expect(
-      _labelColor(tester),
-      theme.primaryContrastingColor.withValues(alpha: 1),
-    );
-    _expectCapsule(tester);
+    final context = tester.element(find.byType(CupertinoSidebarDestination));
+    final primaryColor = CupertinoTheme.of(
+      context,
+    ).primaryColor.withValues(alpha: 1);
+    expect(_fill(tester), primaryColor.withValues(alpha: 0.14));
+    expect(_labelColor(tester), CupertinoColors.white);
+    expect(_iconColor(tester), primaryColor);
+
+    Focus.of(tester.element(find.text('Home'))).requestFocus();
+    await tester.pump();
+    expect(_fill(tester), primaryColor);
+    expect(_labelColor(tester), CupertinoColors.white);
+    expect(_iconColor(tester), CupertinoColors.white);
   });
 
-  testWidgets('a tap selects without changing the label color', (tester) async {
+  testWidgets('an edge touch keeps active tint until focus moves', (
+    tester,
+  ) async {
     var presses = 0;
-    await _pumpRow(tester, onPressed: () => presses++);
-    final before = _labelColor(tester);
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController();
+    addTearDown(controller.dispose);
+    final bodyFocusNode = FocusNode();
+    addTearDown(bodyFocusNode.dispose);
+    const primaryColor = CupertinoColors.systemPurple;
+    await _pumpSelection(
+      tester,
+      controller: controller,
+      edge: true,
+      primaryColor: primaryColor,
+      onPressed: () => presses++,
+      bodyFocusNode: bodyFocusNode,
+    );
 
     final gesture = await tester.startGesture(
       tester.getCenter(find.byType(CupertinoSidebarDestination)),
     );
     await tester.pump(const Duration(milliseconds: 80));
-    expect(_labelColor(tester), before);
+    expect(_fill(tester), primaryColor.withValues(alpha: 1));
+    expect(_labelColor(tester), CupertinoColors.white);
     await gesture.up();
     await tester.pump();
 
     expect(presses, 1);
-    expect(_labelColor(tester), before);
+    expect(Focus.of(tester.element(find.text('Home'))).hasFocus, isTrue);
+    expect(_fill(tester), primaryColor.withValues(alpha: 1));
+
+    bodyFocusNode.requestFocus();
+    await tester.pumpAndSettle();
+    expect(bodyFocusNode.hasFocus, isTrue);
+    expect(Focus.of(tester.element(find.text('Home'))).hasFocus, isFalse);
+    expect(_fill(tester), primaryColor.withValues(alpha: 0.14));
   });
 
-  testWidgets('a long press dims the label and does not select', (
+  testWidgets('a long press keeps opaque content and does not select', (
     tester,
   ) async {
     var presses = 0;
@@ -101,13 +186,38 @@ void main() {
       tester.getCenter(find.byType(CupertinoSidebarDestination)),
     );
     await tester.pump(const Duration(milliseconds: 600));
-    expect(_labelColor(tester), before.withValues(alpha: 0.4));
+    expect(_labelColor(tester), before);
     expect(presses, 0);
 
     await gesture.up();
     await tester.pump();
     expect(_labelColor(tester), before);
     expect(presses, 0);
+  });
+
+  testWidgets('a mouse click keeps edge focus after release', (tester) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController();
+    addTearDown(controller.dispose);
+    const primaryColor = CupertinoColors.systemPurple;
+    await _pumpSelection(
+      tester,
+      controller: controller,
+      edge: true,
+      primaryColor: primaryColor,
+    );
+
+    final destination = find.byType(CupertinoSidebarDestination);
+    final gesture = await tester.startGesture(
+      tester.getCenter(destination),
+      kind: PointerDeviceKind.mouse,
+    );
+    await tester.pump();
+    await gesture.up();
+    await tester.pump();
+
+    expect(Focus.of(tester.element(find.text('Home'))).hasFocus, isTrue);
+    expect(_fill(tester), primaryColor.withValues(alpha: 1));
   });
 
   testWidgets('item style overrides the side capsule', (tester) async {
@@ -165,6 +275,86 @@ void main() {
 
     expect(_fill(tester), const Color(0xFF332211));
     expect(_labelColor(tester), const Color(0xFFDDEEFF));
+  });
+
+  testWidgets('state item style separates background, icon, and label', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController();
+    addTearDown(controller.dispose);
+    final style = CupertinoSidebarItemStyle(
+      backgroundColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.focused)
+            ? const Color(0xFF102030)
+            : const Color(0xFF405060),
+      ),
+      iconColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.focused)
+            ? const Color(0xFF708090)
+            : const Color(0xFFA0B0C0),
+      ),
+      labelColor: const WidgetStatePropertyAll(Color(0xFFD0E0F0)),
+    );
+    await tester.pumpWidget(
+      CupertinoApp(
+        home: CupertinoSidebar.edge(
+          controller: controller,
+          content: CupertinoSidebarDestination(
+            destination: sidebarDestinations.first,
+            selected: true,
+            itemStyle: style,
+            onPressed: () {},
+          ),
+          child: const SizedBox.expand(),
+        ),
+      ),
+    );
+
+    expect(_fill(tester), const Color(0xFF405060));
+    expect(_iconColor(tester), const Color(0xFFA0B0C0));
+    expect(_labelColor(tester), const Color(0xFFD0E0F0));
+
+    Focus.of(tester.element(find.text('Home'))).requestFocus();
+    await tester.pump();
+    expect(_fill(tester), const Color(0xFF102030));
+    expect(_iconColor(tester), const Color(0xFF708090));
+  });
+
+  testWidgets('state item style resolves Cupertino dynamic colors', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController();
+    addTearDown(controller.dispose);
+    const dynamicColor = CupertinoDynamicColor.withBrightness(
+      color: Color(0xFF112233),
+      darkColor: Color(0xFFAABBCC),
+    );
+    const style = CupertinoSidebarItemStyle(
+      backgroundColor: WidgetStatePropertyAll(dynamicColor),
+      iconColor: WidgetStatePropertyAll(dynamicColor),
+      labelColor: WidgetStatePropertyAll(dynamicColor),
+    );
+    await tester.pumpWidget(
+      CupertinoApp(
+        theme: const CupertinoThemeData(brightness: Brightness.dark),
+        home: CupertinoSidebar.edge(
+          controller: controller,
+          content: CupertinoSidebarDestination(
+            destination: sidebarDestinations.first,
+            selected: true,
+            itemStyle: style,
+            onPressed: () {},
+          ),
+          child: const SizedBox.expand(),
+        ),
+      ),
+    );
+
+    expect(_fill(tester).toARGB32(), 0xFFAABBCC);
+    expect(_iconColor(tester).toARGB32(), 0xFFAABBCC);
+    expect(_labelColor(tester).toARGB32(), 0xFFAABBCC);
   });
 
   testWidgets('item style overrides the collapsed bar', (tester) async {
@@ -280,6 +470,18 @@ Color _labelColor(WidgetTester tester) {
   return _labelStyle(tester).color!;
 }
 
+Color _iconColor(WidgetTester tester) {
+  return tester
+      .widget<IconTheme>(
+        find.descendant(
+          of: find.byType(CupertinoSidebarDestination),
+          matching: find.byType(IconTheme),
+        ),
+      )
+      .data
+      .color!;
+}
+
 TextStyle _labelStyle(WidgetTester tester) {
   final style = tester.widget<DefaultTextStyle>(
     find.descendant(
@@ -294,22 +496,38 @@ Future<void> _pumpSelection(
   WidgetTester tester, {
   required AdaptiveNavigationController controller,
   required bool edge,
+  Color? primaryColor,
+  Brightness? brightness,
+  VoidCallback? onPressed,
+  FocusNode? bodyFocusNode,
 }) {
   final destination = CupertinoSidebarDestination(
     destination: sidebarDestinations.first,
     selected: true,
-    onPressed: () {},
+    onPressed: onPressed ?? () {},
   );
   final sidebar = edge
       ? CupertinoSidebar.edge(
           controller: controller,
           content: destination,
-          child: const SizedBox.expand(),
+          child: bodyFocusNode == null
+              ? const SizedBox.expand()
+              : Focus(focusNode: bodyFocusNode, child: const SizedBox.expand()),
         )
       : CupertinoSidebar(
           controller: controller,
           content: destination,
-          child: const SizedBox.expand(),
+          child: bodyFocusNode == null
+              ? const SizedBox.expand()
+              : Focus(focusNode: bodyFocusNode, child: const SizedBox.expand()),
         );
-  return tester.pumpWidget(CupertinoApp(home: sidebar));
+  return tester.pumpWidget(
+    CupertinoApp(
+      theme: CupertinoThemeData(
+        brightness: brightness,
+        primaryColor: primaryColor,
+      ),
+      home: sidebar,
+    ),
+  );
 }

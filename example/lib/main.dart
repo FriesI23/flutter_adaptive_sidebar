@@ -22,7 +22,9 @@ class AdaptiveSidebarExample extends StatefulWidget {
     super.key,
     required this.cupertino,
     required this.themeMode,
+    required this.themeColor,
     required this.onThemeModeChanged,
+    required this.onThemeColorChanged,
   });
 
   /// Forces the Cupertino sidebar when true, and Material when false.
@@ -33,8 +35,14 @@ class AdaptiveSidebarExample extends StatefulWidget {
   /// Active light, dark, or system appearance.
   final ThemeMode themeMode;
 
+  /// Cupertino theme color demonstrated by both sidebar forms.
+  final ExampleThemeColor themeColor;
+
   /// Updates [themeMode].
   final ValueChanged<ThemeMode> onThemeModeChanged;
+
+  /// Updates [themeColor].
+  final ValueChanged<ExampleThemeColor> onThemeColorChanged;
 
   @override
   State<AdaptiveSidebarExample> createState() => _AdaptiveSidebarExampleState();
@@ -408,6 +416,7 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
       customPageTitle: _customPageTitle,
       itemCount: _homeItemCount,
       themeMode: widget.themeMode,
+      themeColor: widget.themeColor,
       textDirection: _textDirection,
       settings: _SettingsValues(
         preferredWidth: _preferredWidth,
@@ -433,6 +442,7 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
       onToggleDirection: _toggleDirection,
       onModeChanged: _onModeChanged,
       onThemeModeChanged: widget.onThemeModeChanged,
+      onThemeColorChanged: widget.onThemeColorChanged,
       onPreferredWidthChanged: _setPreferredWidth,
       onMinimumWidthChanged: _setMinimumWidth,
       onMaximumWidthChanged: _setMaximumWidth,
@@ -515,7 +525,7 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
 
     return Directionality(
       textDirection: _textDirection,
-      child: _ExampleBackground(child: page),
+      child: _ExampleBackground(themeColor: widget.themeColor, child: page),
     );
   }
 }

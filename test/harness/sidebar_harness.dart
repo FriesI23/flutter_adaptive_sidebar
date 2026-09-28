@@ -57,6 +57,7 @@ void useLargeTestWindow(WidgetTester tester) {
 Widget sidebarHost({
   required AdaptiveNavigationController controller,
   required bool cupertino,
+  CupertinoSidebarStyle cupertinoStyle = CupertinoSidebarStyle.liquid,
   NavigationTooltipBuilder? tooltipBuilder,
   Color? scaffoldBackgroundColor,
   Widget? content,
@@ -75,13 +76,22 @@ Widget sidebarHost({
         onSelectionChanged: onSelectionChanged,
       );
   final sidebar = cupertino
-      ? CupertinoSidebar(
-          controller: controller,
-          content: resolvedContent,
-          tooltipBuilder: tooltipBuilder,
-          scaffoldBackgroundColor: scaffoldBackgroundColor,
-          child: body,
-        )
+      ? switch (cupertinoStyle) {
+          CupertinoSidebarStyle.liquid => CupertinoSidebar(
+            controller: controller,
+            content: resolvedContent,
+            tooltipBuilder: tooltipBuilder,
+            scaffoldBackgroundColor: scaffoldBackgroundColor,
+            child: body,
+          ),
+          CupertinoSidebarStyle.liquidEdge => CupertinoSidebar.edge(
+            controller: controller,
+            content: resolvedContent,
+            tooltipBuilder: tooltipBuilder,
+            scaffoldBackgroundColor: scaffoldBackgroundColor,
+            child: body,
+          ),
+        }
       : Row(
           children: [
             MaterialSidebar(
@@ -125,6 +135,7 @@ Future<void> pumpSidebar(
   WidgetTester tester, {
   required AdaptiveNavigationController controller,
   required bool cupertino,
+  CupertinoSidebarStyle cupertinoStyle = CupertinoSidebarStyle.liquid,
   bool disableAnimations = false,
   NavigationTooltipBuilder? tooltipBuilder,
   Color? scaffoldBackgroundColor,
@@ -143,6 +154,7 @@ Future<void> pumpSidebar(
             child: sidebarHost(
               controller: controller,
               cupertino: cupertino,
+              cupertinoStyle: cupertinoStyle,
               tooltipBuilder: tooltipBuilder,
               scaffoldBackgroundColor: scaffoldBackgroundColor,
               content: content,
