@@ -16,6 +16,7 @@ import 'cupertino_sidebar_chrome.dart';
 import 'cupertino_sidebar_collapsed_bar.dart';
 import 'cupertino_sidebar_interaction_scope.dart';
 import 'cupertino_sidebar_panel.dart';
+import 'cupertino_sidebar_theme_data.dart';
 import 'cupertino_sidebar_toolbar_geometry.dart';
 
 /// Opacity of the collapsed bar's glass fill.
@@ -108,7 +109,7 @@ class CupertinoSidebar extends StatefulWidget {
   ///
   /// Selected rows use a translucent primary tint. Pass [style] only to
   /// override that preset. [CupertinoSidebar.edge] is the flush column with
-  /// iPadOS 27 selection and active-state colors.
+  /// retained active and unfocused selection states.
   const CupertinoSidebar({
     super.key,
     required this.controller,
@@ -139,8 +140,9 @@ class CupertinoSidebar extends StatefulWidget {
 
   /// Creates a sidebar flush with the window edge.
   ///
-  /// The glass is [CupertinoSidebarStyle.liquidEdge]. Selected rows inside
-  /// [content] use iPadOS 27 unfocused, focused, and pressed colors.
+  /// The glass is [CupertinoSidebarStyle.liquidEdge]. Destinations inside
+  /// [content] derive their unfocused and retained-active colors from the
+  /// current [CupertinoThemeData.primaryColor].
   const CupertinoSidebar.edge({
     Key? key,
     required AdaptiveNavigationController controller,
@@ -286,13 +288,14 @@ class CupertinoSidebar extends StatefulWidget {
   /// Automatic and manually resizable panel-width policy.
   final SideNavigationExtent extent;
 
-  /// Glass treatment of the expanded panel, and the selection fill.
+  /// Glass treatment of the expanded panel, and its interaction behavior.
   ///
   /// Defaults to [CupertinoSidebarStyle.liquid], the inset rounded surface
   /// with a translucent selection. [CupertinoSidebarStyle.liquidEdge], also
   /// selected by [CupertinoSidebar.edge], draws a column that meets the
-  /// window edge and uses iPadOS 27 selection colors. The package does not
-  /// choose this from the platform.
+  /// window edge and retains the last interacted destination until an outside
+  /// tap. Both styles derive destination colors from the current Cupertino
+  /// theme. The package does not choose this from the platform.
   final CupertinoSidebarStyle style;
 
   /// Optional visual displayed inside the resize target.
@@ -570,6 +573,15 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
     final collapsedBarGlass = barBackground.withValues(
       alpha: math.min(barBackground.a, kCupertinoSidebarCollapsedBarGlassAlpha),
     );
+    final themedEdgeBackground =
+        widget.style == CupertinoSidebarStyle.liquidEdge
+        ? CupertinoSidebarThemeData.of(context).edgeBackgroundColor
+        : null;
+    final sidebarBackground =
+        widget.backgroundColor ??
+        (themedEdgeBackground == null
+            ? null
+            : chrome.fill.resolve(context, sourceColor: themedEdgeBackground));
     final content = CupertinoTheme(
       data: CupertinoTheme.of(context).copyWith(
         scaffoldBackgroundColor: sharedBackground,
@@ -622,8 +634,9 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
                 child: CupertinoSidebarCollapsedCapsule(
                   style: widget.style,
                   backgroundColor:
-                      widget.style == CupertinoSidebarStyle.liquidEdge
-                      ? widget.backgroundColor
+                      widget.style == CupertinoSidebarStyle.liquidEdge &&
+                          sidebarBackground != null
+                      ? sidebarBackground
                       : collapsedBarGlass,
                   minimumBodyExtent:
                       widget.collapsedBarMinimumDestinationExtent,
@@ -715,7 +728,7 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
                   child: CupertinoSidebarPanel(
                     chrome: chrome,
                     width: panelWidth,
-                    backgroundColor: widget.backgroundColor,
+                    backgroundColor: sidebarBackground,
                     contentActive: expandedProgress == 1,
                     content: CupertinoSidebarInteractionScope(
                       outsideTapGeneration: _outsideTapGeneration,

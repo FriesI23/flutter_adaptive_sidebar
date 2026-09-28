@@ -36,7 +36,7 @@ void main() {
     expect(controller.selection, const SidebarPrimarySelection(0));
   });
 
-  testWidgets('edge retains the last interaction across focus and rebuilds', (
+  testWidgets('edge retains theme-colored interaction across rebuilds', (
     tester,
   ) async {
     useLargeTestWindow(tester);
@@ -89,22 +89,25 @@ void main() {
     await tester.tap(action);
     await tester.pumpAndSettle();
     expect(pressedSelection, const SidebarAuxiliarySelection(0));
-    expect(_fill(tester, action)?.toARGB32(), 0xFF0081F6);
-    expect(_fill(tester, settings)?.toARGB32(), 0xFFD2D6DA);
+    final primaryColor = CupertinoTheme.of(
+      tester.element(settings),
+    ).primaryColor;
+    expect(_fill(tester, action), primaryColor.withValues(alpha: 1));
+    expect(_fill(tester, settings), primaryColor.withValues(alpha: 0.14));
 
     rebuild(() => revision += 1);
     await tester.pumpAndSettle();
     expect(find.text('Body 1'), findsOneWidget);
-    expect(_fill(tester, action)?.toARGB32(), 0xFF0081F6);
-    expect(_fill(tester, settings)?.toARGB32(), 0xFFD2D6DA);
+    expect(_fill(tester, action), primaryColor.withValues(alpha: 1));
+    expect(_fill(tester, settings), primaryColor.withValues(alpha: 0.14));
 
     await tester.tap(find.text('Body 1'));
     await tester.pumpAndSettle();
     expect(_fill(tester, action), isNull);
-    expect(_fill(tester, settings)?.toARGB32(), 0xFFD2D6DA);
+    expect(_fill(tester, settings), primaryColor.withValues(alpha: 0.14));
   });
 
-  testWidgets('edge keeps the selected primary index active after rebuild', (
+  testWidgets('edge keeps the selected primary active after rebuild', (
     tester,
   ) async {
     useLargeTestWindow(tester);
@@ -149,7 +152,10 @@ void main() {
       tester.widget<CupertinoSidebarDestination>(destination).active,
       isTrue,
     );
-    expect(_fill(tester, destination)?.toARGB32(), 0xFF0081F6);
+    final primaryColor = CupertinoTheme.of(
+      tester.element(destination),
+    ).primaryColor;
+    expect(_fill(tester, destination), primaryColor.withValues(alpha: 1));
 
     rebuild(() => revision += 1);
     await tester.pumpAndSettle();
@@ -158,7 +164,7 @@ void main() {
       tester.widget<CupertinoSidebarDestination>(destination).active,
       isTrue,
     );
-    expect(_fill(tester, destination)?.toARGB32(), 0xFF0081F6);
+    expect(_fill(tester, destination), primaryColor.withValues(alpha: 1));
   });
 }
 

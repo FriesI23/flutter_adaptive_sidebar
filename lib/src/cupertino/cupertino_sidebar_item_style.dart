@@ -3,9 +3,8 @@ import 'package:flutter/cupertino.dart';
 /// Optional colors and label type for a Cupertino sidebar row.
 ///
 /// Pass one to [CupertinoSidebarDestination], [CupertinoSidebarNavigation], or
-/// [CupertinoSidebarCollapsedBar]. A null field keeps that row's default: the
-/// side capsule follows liquid or edge, and the collapsed bar keeps its
-/// measured label style.
+/// [CupertinoSidebarCollapsedBar]. A null field keeps the theme-derived
+/// liquid or edge treatment and the collapsed bar's measured label style.
 ///
 /// [labelStyle] replaces only the fields it sets. The resolved selection
 /// color replaces [TextStyle.color].

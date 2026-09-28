@@ -260,6 +260,35 @@ void main() {
     expect(dark, isNot(light));
   });
 
+  testWidgets('liquidEdge theme tint keeps the package glass opacity', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController();
+    addTearDown(controller.dispose);
+    const sourceColor = Color(0xFF123456);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          extensions: const [
+            CupertinoSidebarThemeData(edgeBackgroundColor: sourceColor),
+          ],
+        ),
+        home: CupertinoSidebar.edge(
+          controller: controller,
+          content: const SizedBox.expand(),
+          child: const SizedBox.expand(),
+        ),
+      ),
+    );
+
+    expect(
+      _surfaceColor(tester),
+      sourceColor.withValues(alpha: kCupertinoSidebarEdgeFillAlpha),
+    );
+  });
+
   testWidgets('sidebar backgroundColor keeps a plain color unchanged', (
     tester,
   ) async {
@@ -269,7 +298,12 @@ void main() {
     const backgroundColor = Color(0xFF123456);
 
     await tester.pumpWidget(
-      CupertinoApp(
+      MaterialApp(
+        theme: ThemeData(
+          extensions: const [
+            CupertinoSidebarThemeData(edgeBackgroundColor: Color(0xFFABCDEF)),
+          ],
+        ),
         home: CupertinoSidebar.edge(
           controller: controller,
           backgroundColor: backgroundColor,

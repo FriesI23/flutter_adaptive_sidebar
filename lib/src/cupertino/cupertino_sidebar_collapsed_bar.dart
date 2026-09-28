@@ -19,24 +19,6 @@ const double _kCollapsedBarSelectionHeight = 36;
 
 const double _kCollapsedBarEdgeFillAlpha = 0.45;
 
-// Tuned from iPadOS 27.0 Files screenshots at 2x scale. The light reference
-// is a composited result, so keep it as a neutral overlay instead of an opaque
-// pixel color. This preserves the selection layer over tinted glass hosts.
-// The dark reference remains opaque because the native thumb is near-black.
-const _cupertinoCollapsedEdgeSelectedColor =
-    CupertinoDynamicColor.withBrightness(
-      debugLabel: 'cupertinoCollapsedEdgeSelected',
-      color: Color(0x12000000),
-      darkColor: Color(0xFF070E13),
-    );
-
-const _cupertinoCollapsedEdgeSurfaceColor =
-    CupertinoDynamicColor.withBrightness(
-      debugLabel: 'cupertinoCollapsedEdgeSurface',
-      color: Color(0xFFFBFCFD),
-      darkColor: Color(0xFF3E3E3E),
-    );
-
 const _cupertinoCollapsedEdgeBorderColor = CupertinoDynamicColor.withBrightness(
   debugLabel: 'cupertinoCollapsedEdgeBorder',
   color: Color(0x26000000),
@@ -124,20 +106,12 @@ class CupertinoSidebarCollapsedBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = CupertinoSidebarStyleScope.styleOf(context);
     final primaryColor = CupertinoTheme.of(context).primaryColor;
-    final fallbackHighlight = switch (style) {
-      CupertinoSidebarStyle.liquid => primaryColor.withValues(alpha: 0.14),
-      CupertinoSidebarStyle.liquidEdge => CupertinoDynamicColor.resolve(
-        _cupertinoCollapsedEdgeSelectedColor,
-        context,
-      ),
-    };
     final highlight = CupertinoSidebarItemStyle.backgroundColorOf(
       itemStyle,
       context,
       states: const {WidgetState.selected},
-      fallback: fallbackHighlight,
+      fallback: primaryColor.withValues(alpha: 0.14),
     )!;
     return _DraggableCollapsedSelection(
       selectedIndex: selectedIndex,
@@ -694,10 +668,8 @@ class CupertinoSidebarCollapsedCapsule extends StatelessWidget {
   /// Sidebar style used to resolve this collapsed surface.
   final CupertinoSidebarStyle style;
 
-  /// Optional tint. Null uses the measured edge preset.
-  ///
-  /// Liquid callers provide their already-resolved theme bar tint.
-  final Color? backgroundColor;
+  /// Theme-resolved glass tint.
+  final Color backgroundColor;
 
   /// Minimum width of [child], after [leading].
   final double minimumBodyExtent;
@@ -711,15 +683,8 @@ class CupertinoSidebarCollapsedCapsule extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final edge = style == CupertinoSidebarStyle.liquidEdge;
-    final sourceBackground = edge
-        ? backgroundColor ??
-              CupertinoDynamicColor.resolve(
-                _cupertinoCollapsedEdgeSurfaceColor,
-                context,
-              )
-        : backgroundColor!;
     final resolvedBackground = CupertinoDynamicColor.resolve(
-      sourceBackground,
+      backgroundColor,
       context,
     );
     final effectiveBackground = edge

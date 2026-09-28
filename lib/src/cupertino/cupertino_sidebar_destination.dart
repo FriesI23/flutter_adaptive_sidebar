@@ -4,7 +4,6 @@ import '../adaptive_navigation_destination.dart';
 import 'cupertino_sidebar.dart';
 import 'cupertino_sidebar_chrome.dart';
 import 'cupertino_sidebar_item_style.dart';
-import 'cupertino_sidebar_standard_colors.dart';
 
 /// Height of the selection capsule. The corner radius is half of this.
 const double _kSelectionHeight = 44;
@@ -53,8 +52,8 @@ class _CupertinoSidebarDestinationDefaults {
         showsFocusBorder: true,
       ),
       CupertinoSidebarStyle.liquidEdge => _CupertinoSidebarDestinationDefaults(
-        selectedBackgroundColor: cupertinoSidebarEdgeSelectedColor,
-        activeBackgroundColor: cupertinoSidebarEdgeActiveColor,
+        selectedBackgroundColor: primaryColor.withValues(alpha: 0.14),
+        activeBackgroundColor: primaryColor,
         selectedIconColor: primaryColor,
         unselectedIconColor: primaryColor,
         activeIconColor: activeForegroundColor,
@@ -100,13 +99,13 @@ class _CupertinoSidebarDestinationDefaults {
 /// liquid                   edge
 /// o  Label                 o  Label
 /// ( o  Label )             ( o  Label )
-/// tint                     neutral until active
+/// tint                     tint until active
 /// ```
 ///
-/// Both styles share one capsule. Edge rows use accent fill and contrasting
-/// content while active, focused, or pressed. The edge fill is used inside
-/// [CupertinoSidebar.edge]. [itemStyle] replaces the fill, icon and label
-/// colors, and label type.
+/// Both styles derive their accent from [CupertinoThemeData.primaryColor].
+/// Edge rows retain the last interaction with an opaque accent fill and
+/// contrasting content; their unfocused selection keeps a translucent tint.
+/// [itemStyle] replaces the fill, icon and label colors, and label type.
 class CupertinoSidebarDestination extends StatelessWidget {
   /// Creates a destination row.
   const CupertinoSidebarDestination({

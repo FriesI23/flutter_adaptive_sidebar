@@ -51,7 +51,7 @@ class CupertinoSidebarNavigation extends StatefulWidget {
 
   /// Fill, label colors, and label type for every row.
   ///
-  /// Null keeps the liquid tint or the edge fill.
+  /// Null keeps the theme-derived liquid or edge treatment.
   final CupertinoSidebarItemStyle? itemStyle;
 
   @override

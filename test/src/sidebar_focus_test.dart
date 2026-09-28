@@ -54,37 +54,47 @@ void main() {
     expect(controller.selection, const SidebarPrimarySelection(1));
   });
 
-  testWidgets('tap outside clears the retained edge interaction', (
-    tester,
-  ) async {
-    useLargeTestWindow(tester);
-    final controller = AdaptiveNavigationController();
-    addTearDown(controller.dispose);
-    await pumpSidebar(
-      tester,
-      controller: controller,
-      cupertino: true,
-      cupertinoStyle: CupertinoSidebarStyle.liquidEdge,
-    );
-    await tester.pumpAndSettle();
+  testWidgets(
+    'tap outside clears the retained theme-colored edge interaction',
+    (tester) async {
+      useLargeTestWindow(tester);
+      final controller = AdaptiveNavigationController();
+      addTearDown(controller.dispose);
+      await pumpSidebar(
+        tester,
+        controller: controller,
+        cupertino: true,
+        cupertinoStyle: CupertinoSidebarStyle.liquidEdge,
+      );
+      await tester.pumpAndSettle();
 
-    final destination = find.byKey(
-      const ValueKey('cupertino-sidebar-destination-0'),
-    );
-    await tester.tap(destination);
-    await tester.pumpAndSettle();
+      final destination = find.byKey(
+        const ValueKey('cupertino-sidebar-destination-0'),
+      );
+      await tester.tap(destination);
+      await tester.pumpAndSettle();
 
-    expect(controller.selection, const SidebarPrimarySelection(0));
-    expect(_focusNode(tester, destination).hasFocus, isTrue);
-    expect(_destinationFill(tester, destination).toARGB32(), 0xFF0081F6);
+      expect(controller.selection, const SidebarPrimarySelection(0));
+      expect(_focusNode(tester, destination).hasFocus, isTrue);
+      final primaryColor = CupertinoTheme.of(
+        tester.element(destination),
+      ).primaryColor;
+      expect(
+        _destinationFill(tester, destination),
+        primaryColor.withValues(alpha: 1),
+      );
 
-    await tester.tap(find.text('Body'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Body'));
+      await tester.pumpAndSettle();
 
-    expect(_focusNode(tester, destination).hasFocus, isFalse);
-    expect(_destinationFill(tester, destination).toARGB32(), 0xFFD2D6DA);
-    expect(controller.selection, const SidebarPrimarySelection(0));
-  });
+      expect(_focusNode(tester, destination).hasFocus, isFalse);
+      expect(
+        _destinationFill(tester, destination),
+        primaryColor.withValues(alpha: 0.14),
+      );
+      expect(controller.selection, const SidebarPrimarySelection(0));
+    },
+  );
 
   testWidgets('tab reaches cupertino destinations on macOS', (tester) async {
     useLargeTestWindow(tester);

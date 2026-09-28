@@ -80,17 +80,16 @@ controller.toggleExpanded();
 不再使用控制器时，请调用 `dispose()`。响应式布局和其他配置可参考
 [示例应用](example/lib/main.dart)。
 
-`CupertinoSidebar.edge` 默认使用按 iPadOS 27 Sidebar 调整的中性亮色/暗色填充。
-可通过 `backgroundColor` 传入普通 `Color` 或 `CupertinoDynamicColor` 覆盖表面颜色；
-透明颜色会保留背景模糊效果。
-非当前交互的页面选中态保持中性色；最后交互的目标、聚焦和按下状态使用系统强调色
-及反色内容，并在主题重建后继续保持；实际点按 Sidebar 外部时恢复中性选中态。
-可通过 `CupertinoSidebarItemStyle` 的 `WidgetStateProperty` 颜色按状态覆盖主题配色。
-
-Edge Sidebar 收起后，横向 bar 会自动采用 iPadOS 27 Files 的样式：44pt 玻璃胶囊仍然
-悬浮，内部 36pt 选中块使用中性亮色/暗色填充和强调色文字；Liquid Sidebar 保留原有
-半透明强调色选中态。传入的 `backgroundColor` 也会作为 Edge 横向胶囊的 tint，横向
-bar 自身的 `itemStyle` 可独立覆盖 destination 配色。
+`CupertinoSidebar.edge` 默认使用按 iPadOS 27 Sidebar 调整的中性亮色/暗色填充。应用可通过
+`CupertinoSidebarThemeData.edgeBackgroundColor` 提供主题来源色；package 会统一解析动态颜色
+并应用 Edge 玻璃透明度，同时作用于展开和收起表面。也可通过 `backgroundColor` 传入普通
+`Color` 或 `CupertinoDynamicColor`，直接覆盖展开和收起的 Edge 表面；透明颜色会保留背景
+模糊效果。
+Edge 与 Liquid 的强调色都来源于 `CupertinoTheme.primaryColor`，但 Edge 保留自身的交互
+样式：失焦的页面选中态使用半透明强调色，最后交互的目标、聚焦和按下状态使用不透明强调色
+及反色内容，并在主题重建后继续保持；实际点按 Sidebar 外部时恢复失焦选中态。收起后的横向
+bar 同样跟随主题强调色，同时保留 Edge 胶囊原有的表面、边框、阴影和透明度处理。需要显式
+覆盖时，可使用 `CupertinoSidebarItemStyle` 及其 `WidgetStateProperty` 颜色。
 
 ## 更多示例
 
@@ -102,8 +101,8 @@ cd example
 fvm flutter run
 ```
 
-示例应用包含响应式布局、Material 与 Cupertino 样式、自定义导航内容、折叠栏和
-窗口控件避让。
+示例应用包含默认及多种主题色切换、响应式布局、Material 与 Cupertino 样式、
+自定义导航内容、折叠栏和窗口控件避让。
 
 </details>
 

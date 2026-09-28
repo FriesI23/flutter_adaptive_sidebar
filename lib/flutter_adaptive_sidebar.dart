@@ -14,6 +14,7 @@ export 'src/cupertino/cupertino_sidebar_collapsed_bar.dart'
 export 'src/cupertino/cupertino_sidebar_destination.dart';
 export 'src/cupertino/cupertino_sidebar_item_style.dart';
 export 'src/cupertino/cupertino_sidebar_navigation.dart';
+export 'src/cupertino/cupertino_sidebar_theme_data.dart';
 export 'src/cupertino/cupertino_sidebar_toolbar_geometry.dart';
 export 'src/material/material_sidebar.dart';
 export 'src/material/material_sidebar_item_style.dart';

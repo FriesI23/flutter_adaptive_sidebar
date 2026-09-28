@@ -24,6 +24,95 @@ void main() {
     expect(navigationBar.preferredSize.height, 54);
   });
 
+  testWidgets('Cupertino example cycles default and custom sidebar tints', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: true));
+    await tester.pumpAndSettle();
+
+    final colorButton = find.byKey(const ValueKey('theme-color-button'));
+    BuildContext destinationContext() => tester.element(
+      find.byKey(const ValueKey('cupertino-sidebar-destination-0')),
+    );
+    expect(
+      CupertinoTheme.of(destinationContext()).primaryColor,
+      const CupertinoThemeData().primaryColor,
+    );
+    await tester.tap(find.byKey(const ValueKey('glass-style-button')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(colorButton);
+    await tester.pumpAndSettle();
+    expect(
+      CupertinoTheme.of(destinationContext()).primaryColor,
+      CupertinoColors.systemPurple,
+    );
+    final sideHighlight = tester.widget<DecoratedBox>(
+      find.descendant(
+        of: find.byKey(const ValueKey('cupertino-sidebar-destination-0')),
+        matching: find.byType(DecoratedBox),
+      ),
+    );
+    expect(
+      (sideHighlight.decoration as BoxDecoration).color,
+      CupertinoColors.systemPurple.withValues(alpha: 0.14),
+    );
+    final surface = find.byKey(const ValueKey('cupertino-sidebar-surface'));
+    final edgeSource = Theme.of(
+      tester.element(surface),
+    ).extension<CupertinoSidebarThemeData>()!.edgeBackgroundColor!;
+    final surfaceColor = tester.widget<ColoredBox>(
+      find.descendant(of: surface, matching: find.byType(ColoredBox)).first,
+    );
+    expect(
+      surfaceColor.color,
+      edgeSource.withValues(alpha: kCupertinoSidebarEdgeFillAlpha),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('cupertino-sidebar-toggle')));
+    await tester.pumpAndSettle();
+    final barHighlight = tester.widget<DecoratedBox>(
+      find.byKey(
+        const ValueKey('cupertino-sidebar-collapsed-selection-highlight'),
+      ),
+    );
+    expect(
+      (barHighlight.decoration as BoxDecoration).color,
+      CupertinoColors.systemPurple.withValues(alpha: 0.14),
+    );
+    final capsule = find.byKey(
+      const ValueKey('cupertino-sidebar-collapsed-capsule'),
+    );
+    final capsuleColor = tester.widget<ColoredBox>(
+      find.descendant(of: capsule, matching: find.byType(ColoredBox)).first,
+    );
+    expect(capsuleColor.color, edgeSource.withValues(alpha: 0.45));
+
+    for (final expected in [
+      CupertinoColors.systemTeal,
+      CupertinoColors.systemOrange,
+      const CupertinoThemeData().primaryColor,
+    ]) {
+      await tester.tap(colorButton);
+      await tester.pumpAndSettle();
+      expect(
+        CupertinoTheme.of(
+          tester.element(
+            find.byKey(
+              const ValueKey('cupertino-sidebar-collapsed-destination-0'),
+            ),
+          ),
+        ).primaryColor,
+        expected,
+      );
+    }
+  });
+
   testWidgets(
     'Cupertino top inset exposes safe area and supports iOS offsets',
     (tester) async {
@@ -304,21 +393,24 @@ void main() {
     final lightBackground = tester.widget<DecoratedBox>(
       find.byKey(const ValueKey('example-background')),
     );
-    final lightGradient =
-        (lightBackground.decoration as BoxDecoration).gradient!
-            as LinearGradient;
-    expect(lightGradient.begin, Alignment.centerLeft);
-    expect(lightGradient.end, Alignment.centerRight);
+    final lightDecoration = lightBackground.decoration as BoxDecoration;
+    expect(lightDecoration.gradient, isNull);
+    expect(
+      lightDecoration.color?.toARGB32(),
+      CupertinoColors.white.toARGB32(),
+    );
 
     await tester.tap(find.byTooltip('Appearance'));
     await tester.pumpAndSettle();
     final darkBackground = tester.widget<DecoratedBox>(
       find.byKey(const ValueKey('example-background')),
     );
-    final darkGradient =
-        (darkBackground.decoration as BoxDecoration).gradient!
-            as LinearGradient;
-    expect(darkGradient.colors, isNot(lightGradient.colors));
+    final darkDecoration = darkBackground.decoration as BoxDecoration;
+    expect(darkDecoration.gradient, isNull);
+    expect(
+      darkDecoration.color?.toARGB32(),
+      CupertinoColors.black.toARGB32(),
+    );
 
     final settingsContext = tester.element(find.text('Preferred width'));
     expect(Theme.of(settingsContext).brightness, Brightness.dark);
@@ -326,6 +418,16 @@ void main() {
 
     await tester.tap(find.byTooltip('Use Cupertino'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('theme-color-button')));
+    await tester.pumpAndSettle();
+    final tintedBackground = tester.widget<DecoratedBox>(
+      find.byKey(const ValueKey('example-background')),
+    );
+    final tintedGradient =
+        (tintedBackground.decoration as BoxDecoration).gradient!
+            as LinearGradient;
+    expect(tintedGradient.begin, Alignment.centerLeft);
+    expect(tintedGradient.end, Alignment.centerRight);
     expect(
       CupertinoTheme.brightnessOf(
         tester.element(find.textContaining('Preferred width')),

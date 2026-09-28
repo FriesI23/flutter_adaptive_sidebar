@@ -75,8 +75,12 @@ class CupertinoSidebarFill {
   final double alpha;
 
   /// The fill for the current theme brightness.
-  Color resolve(BuildContext context) {
-    final source = color ?? CupertinoTheme.of(context).barBackgroundColor;
+  ///
+  /// [sourceColor] lets an app theme replace the preset tint while preserving
+  /// this fill's opacity treatment.
+  Color resolve(BuildContext context, {Color? sourceColor}) {
+    final source =
+        sourceColor ?? color ?? CupertinoTheme.of(context).barBackgroundColor;
     final resolved = CupertinoDynamicColor.resolve(source, context);
     return resolved.withValues(alpha: math.min(resolved.a, alpha));
   }

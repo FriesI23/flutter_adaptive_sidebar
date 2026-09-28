@@ -83,21 +83,21 @@ Dispose the controller when it is no longer needed. For responsive layouts and
 additional configuration, see the [example app](example/lib/main.dart).
 
 `CupertinoSidebar.edge` uses a neutral light/dark fill tuned to the iPadOS 27
-sidebar. Pass `backgroundColor` to override the surface with either a regular
-`Color` or a `CupertinoDynamicColor`; transparent colors retain backdrop blur.
-Its inactive page selection stays neutral, while the last interacted
-destination, focus, and press use the system accent with contrasting content.
-The retained interaction survives theme rebuilds. Use
-an outside tap to return it to the neutral selection. Use
-`CupertinoSidebarItemStyle` and its `WidgetStateProperty` colors for state-aware
-theme overrides.
-
-When an edge Sidebar is collapsed, its horizontal bar automatically follows
-the iPadOS 27 Files treatment: the 44pt glass capsule remains floating, while
-the 36pt selection uses a neutral light/dark fill and an accent label. Liquid
-sidebars retain the original translucent-primary selection. A supplied
-`backgroundColor` also tints the edge collapsed capsule, and the collapsed
-bar's own `itemStyle` can override its destination colors independently.
+sidebar. Apps can provide a theme tint through
+`CupertinoSidebarThemeData.edgeBackgroundColor`; the package resolves dynamic
+colors and applies the edge glass opacity to both the expanded and collapsed
+surfaces. Pass `backgroundColor` to override the expanded and collapsed edge
+surface directly with either a regular `Color` or a `CupertinoDynamicColor`;
+transparent colors retain backdrop blur.
+Edge and liquid destinations derive their accent from
+`CupertinoTheme.primaryColor`. Edge keeps its distinct interaction treatment:
+the unfocused page selection uses a translucent accent, while the last
+interacted destination, focus, and press use an opaque accent with contrasting
+content. The retained interaction survives theme rebuilds; an outside tap
+returns it to the unfocused selection. The collapsed horizontal bar uses the
+same theme accent while retaining the edge capsule's surface, border, shadow,
+and opacity treatment. Use `CupertinoSidebarItemStyle` and its
+`WidgetStateProperty` colors for explicit state-aware overrides.
 
 ## More examples
 
@@ -109,7 +109,7 @@ cd example
 fvm flutter run
 ```
 
-The example covers responsive layouts, Material and Cupertino styles, custom
+The example covers theme-color switching, responsive layouts, Material and Cupertino styles, custom
 navigation content, collapsed bars, and window-control obstruction insets.
 
 </details>
