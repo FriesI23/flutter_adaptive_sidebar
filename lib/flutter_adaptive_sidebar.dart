@@ -4,7 +4,8 @@ library;
 export 'src/adaptive_navigation_controller.dart';
 export 'src/adaptive_navigation_destination.dart';
 export 'src/cupertino/cupertino_sidebar.dart';
-export 'src/cupertino/cupertino_sidebar_chrome.dart' show CupertinoSidebarStyle;
+export 'src/cupertino/cupertino_sidebar_chrome.dart'
+    show CupertinoSidebarStyle, kCupertinoSidebarEdgeFillAlpha;
 export 'src/cupertino/cupertino_sidebar_collapsed_bar.dart'
     show
         CupertinoSidebarCollapsedBar,

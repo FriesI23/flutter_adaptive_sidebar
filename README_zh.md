@@ -80,6 +80,10 @@ controller.toggleExpanded();
 不再使用控制器时，请调用 `dispose()`。响应式布局和其他配置可参考
 [示例应用](example/lib/main.dart)。
 
+`CupertinoSidebar.edge` 默认使用按 iPadOS 27 Sidebar 调整的中性亮色/暗色填充。
+可通过 `backgroundColor` 传入普通 `Color` 或 `CupertinoDynamicColor` 覆盖表面颜色；
+透明颜色会保留背景模糊效果。
+
 ## 更多示例
 
 <details>

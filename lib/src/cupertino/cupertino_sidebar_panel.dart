@@ -57,6 +57,9 @@ class CupertinoSidebarPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textStyle = CupertinoTheme.of(context).textTheme.textStyle;
+    final resolvedBackgroundColor = backgroundColor == null
+        ? chrome.fill.resolve(context)
+        : CupertinoDynamicColor.resolve(backgroundColor!, context);
     final destinationLayer = Positioned.fill(
       child: IgnorePointer(
         ignoring: !contentActive,
@@ -71,7 +74,7 @@ class CupertinoSidebarPanel extends StatelessWidget {
     );
     final surface = CupertinoFloatingGlassSurface(
       key: const ValueKey('cupertino-sidebar-surface'),
-      backgroundColor: backgroundColor ?? chrome.fill.resolve(context),
+      backgroundColor: resolvedBackgroundColor,
       borderRadius: chrome.borderRadius,
       blurSigma: chrome.blurSigma,
       boxShadow: chrome.boxShadow,

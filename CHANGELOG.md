@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Match the default Cupertino edge sidebar fill to iPadOS 27 in light and dark
+  modes.
+- Add `CupertinoSidebar.backgroundColor` with plain and dynamic color support.
+- Expose `kCupertinoSidebarEdgeFillAlpha` for theme-color overrides that retain
+  the edge style's default glass opacity.
+
 ## 0.1.0
 
 - Material and Cupertino sidebars backed by a shared navigation controller.

@@ -130,6 +130,7 @@ class CupertinoSidebar extends StatefulWidget {
     this.expandLabel,
     this.collapseLabel,
     this.tooltipBuilder,
+    this.backgroundColor,
     this.scaffoldBackgroundColor,
   }) : // Keep the public override name while storing its nullable const value.
        // ignore: prefer_initializing_formals
@@ -162,6 +163,7 @@ class CupertinoSidebar extends StatefulWidget {
     String? expandLabel,
     String? collapseLabel,
     NavigationTooltipBuilder? tooltipBuilder,
+    Color? backgroundColor,
     Color? scaffoldBackgroundColor,
   }) : this(
          key: key,
@@ -183,6 +185,7 @@ class CupertinoSidebar extends StatefulWidget {
          expandLabel: expandLabel,
          collapseLabel: collapseLabel,
          tooltipBuilder: tooltipBuilder,
+         backgroundColor: backgroundColor,
          scaffoldBackgroundColor: scaffoldBackgroundColor,
        );
 
@@ -297,6 +300,13 @@ class CupertinoSidebar extends StatefulWidget {
 
   /// Optional tooltip wrapper for the show and hide button.
   final NavigationTooltipBuilder? tooltipBuilder;
+
+  /// Background color of the expanded sidebar surface.
+  ///
+  /// A [CupertinoDynamicColor] is resolved against the current context. When
+  /// null, the selected [style] supplies its default fill. Transparent colors
+  /// retain the style's backdrop blur; opaque colors skip it.
+  final Color? backgroundColor;
 
   /// Shared scaffold color for the backdrop and the content beside the sidebar.
   ///
@@ -684,6 +694,7 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
                   child: CupertinoSidebarPanel(
                     chrome: chrome,
                     width: panelWidth,
+                    backgroundColor: widget.backgroundColor,
                     contentActive: expandedProgress == 1,
                     content: _CupertinoSidebarMode(
                       filled: widget.style == CupertinoSidebarStyle.liquidEdge,

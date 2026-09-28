@@ -82,6 +82,10 @@ controller.toggleExpanded();
 Dispose the controller when it is no longer needed. For responsive layouts and
 additional configuration, see the [example app](example/lib/main.dart).
 
+`CupertinoSidebar.edge` uses a neutral light/dark fill tuned to the iPadOS 27
+sidebar. Pass `backgroundColor` to override the surface with either a regular
+`Color` or a `CupertinoDynamicColor`; transparent colors retain backdrop blur.
+
 ## More examples
 
 <details>

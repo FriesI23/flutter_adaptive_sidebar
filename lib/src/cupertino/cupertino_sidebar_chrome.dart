@@ -8,6 +8,14 @@ const double kCupertinoSidebarLiquidFillAlpha = 0.7;
 /// Opacity of [CupertinoSidebarChrome.liquidEdge]'s glass fill.
 const double kCupertinoSidebarEdgeFillAlpha = 0.9;
 
+// Tuned from composited iPadOS 27.0 Files sidebar screenshots. Apple does not
+// publish an equivalent semantic color for custom Flutter chrome.
+const _cupertinoSidebarEdgeFillColor = CupertinoDynamicColor.withBrightness(
+  debugLabel: 'cupertinoSidebarEdgeFill',
+  color: Color(0xFFE3E8EC),
+  darkColor: Color(0xFF1B2024),
+);
+
 /// Glass treatment for a Cupertino sidebar.
 ///
 /// The package does not choose this from the platform. [liquid] is the
@@ -32,7 +40,7 @@ class CupertinoSidebarFill {
   const CupertinoSidebarFill({this.color, required this.alpha});
 
   /// Source color. Null uses [CupertinoThemeData.barBackgroundColor].
-  final CupertinoDynamicColor? color;
+  final Color? color;
 
   /// Maximum opacity applied after [color] is resolved.
   final double alpha;
@@ -115,8 +123,8 @@ class CupertinoSidebarChrome {
 
   /// Glass column that meets the window edge.
   ///
-  /// The page starts at the inner edge. The fill is the themed secondary
-  /// background, and [border] draws the separator on the inner edge.
+  /// The page starts at the inner edge. The fill matches the neutral iPadOS 27
+  /// sidebar material, and [border] draws the separator on the inner edge.
   static const CupertinoSidebarChrome liquidEdge = CupertinoSidebarChrome(
     surfaceMargin: 0,
     borderRadius: BorderRadius.zero,
@@ -124,7 +132,7 @@ class CupertinoSidebarChrome {
     resizeHandleCornerInset: 0,
     flushToWindowEdge: true,
     fill: CupertinoSidebarFill(
-      color: CupertinoColors.secondarySystemBackground,
+      color: _cupertinoSidebarEdgeFillColor,
       alpha: kCupertinoSidebarEdgeFillAlpha,
     ),
     blurSigma: 10,
