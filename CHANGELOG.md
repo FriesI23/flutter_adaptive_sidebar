@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Match the iPadOS 27 Edge Sidebar label transition: black to white in light
+  appearance and white in both inactive and active dark states.
+
 - Match the collapsed edge bar to the iPadOS 27 Files light/dark glass,
   neutral selection, and accent-label treatment while preserving liquid
   defaults and the measured 44pt/36pt geometry.

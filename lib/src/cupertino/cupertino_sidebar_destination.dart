@@ -34,7 +34,7 @@ class _CupertinoSidebarDestinationDefaults {
   ) {
     final theme = CupertinoTheme.of(context);
     final primaryColor = theme.primaryColor.withValues(alpha: 1);
-    final contrastingColor = theme.primaryContrastingColor.withValues(alpha: 1);
+    const activeForegroundColor = CupertinoColors.white;
     final labelColor = CupertinoDynamicColor.resolve(
       CupertinoColors.label,
       context,
@@ -57,10 +57,10 @@ class _CupertinoSidebarDestinationDefaults {
         activeBackgroundColor: cupertinoSidebarEdgeActiveColor,
         selectedIconColor: primaryColor,
         unselectedIconColor: primaryColor,
-        activeIconColor: contrastingColor,
+        activeIconColor: activeForegroundColor,
         selectedLabelColor: labelColor,
         unselectedLabelColor: labelColor,
-        activeLabelColor: contrastingColor,
+        activeLabelColor: activeForegroundColor,
         requestsFocusOnPointerDown: true,
         showsFocusBorder: false,
       ),

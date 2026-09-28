@@ -90,6 +90,17 @@ void main() {
     );
 
     expect(_fill(tester).toARGB32(), 0xFF2D3235);
+    expect(_labelColor(tester).toARGB32(), 0xFFFFFFFF);
+    final context = tester.element(find.byType(CupertinoSidebarDestination));
+    expect(
+      _iconColor(tester),
+      CupertinoTheme.of(context).primaryColor.withValues(alpha: 1),
+    );
+
+    Focus.of(tester.element(find.text('Home'))).requestFocus();
+    await tester.pump();
+    expect(_labelColor(tester).toARGB32(), 0xFFFFFFFF);
+    expect(_iconColor(tester).toARGB32(), 0xFFFFFFFF);
   });
 
   testWidgets('focused edge selection uses active fill and white content', (
