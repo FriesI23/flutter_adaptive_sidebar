@@ -395,10 +395,7 @@ void main() {
     );
     final lightDecoration = lightBackground.decoration as BoxDecoration;
     expect(lightDecoration.gradient, isNull);
-    expect(
-      lightDecoration.color?.toARGB32(),
-      CupertinoColors.white.toARGB32(),
-    );
+    expect(lightDecoration.color?.toARGB32(), CupertinoColors.white.toARGB32());
 
     await tester.tap(find.byTooltip('Appearance'));
     await tester.pumpAndSettle();
@@ -407,10 +404,7 @@ void main() {
     );
     final darkDecoration = darkBackground.decoration as BoxDecoration;
     expect(darkDecoration.gradient, isNull);
-    expect(
-      darkDecoration.color?.toARGB32(),
-      CupertinoColors.black.toARGB32(),
-    );
+    expect(darkDecoration.color?.toARGB32(), CupertinoColors.black.toARGB32());
 
     final settingsContext = tester.element(find.text('Preferred width'));
     expect(Theme.of(settingsContext).brightness, Brightness.dark);
