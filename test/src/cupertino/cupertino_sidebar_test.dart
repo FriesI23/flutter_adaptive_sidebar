@@ -794,6 +794,155 @@ void main() {
     );
   });
 
+  for (final (brightness, surface, selection) in [
+    (Brightness.light, 0x73FBFCFD, 0xFFE0E6EC),
+    (Brightness.dark, 0x733E3E3E, 0xFF070E13),
+  ]) {
+    testWidgets('edge collapsed bar uses iPadOS 27 $brightness colors', (
+      tester,
+    ) async {
+      useLargeTestWindow(tester);
+      final controller = AdaptiveNavigationController(initialExpanded: false);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        collapsedBarHost(
+          controller: controller,
+          style: CupertinoSidebarStyle.liquidEdge,
+          theme: CupertinoThemeData(brightness: brightness),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final capsule = find.byKey(
+        const ValueKey('cupertino-sidebar-collapsed-capsule'),
+      );
+      final capsuleColor = tester.widget<ColoredBox>(
+        find.descendant(of: capsule, matching: find.byType(ColoredBox)).first,
+      );
+      expect(capsuleColor.color.toARGB32(), surface);
+
+      final highlight = tester.widget<DecoratedBox>(
+        find.byKey(
+          const ValueKey('cupertino-sidebar-collapsed-selection-highlight'),
+        ),
+      );
+      expect(
+        (highlight.decoration as BoxDecoration).color?.toARGB32(),
+        selection,
+      );
+
+      final context = tester.element(find.text('Home'));
+      expect(
+        tester.widget<Text>(find.text('Home')).style?.color,
+        CupertinoTheme.of(context).primaryColor.withValues(alpha: 1),
+      );
+      expect(
+        tester.widget<Text>(find.text('Search')).style?.color?.toARGB32(),
+        CupertinoDynamicColor.resolve(
+          CupertinoColors.label,
+          context,
+        ).withValues(alpha: 1).toARGB32(),
+      );
+    });
+  }
+
+  testWidgets('edge collapsed bar caps a custom surface tint', (tester) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController(initialExpanded: false);
+    addTearDown(controller.dispose);
+    const custom = Color(0xFF336699);
+
+    await tester.pumpWidget(
+      collapsedBarHost(
+        controller: controller,
+        style: CupertinoSidebarStyle.liquidEdge,
+        backgroundColor: custom,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final capsule = find.byKey(
+      const ValueKey('cupertino-sidebar-collapsed-capsule'),
+    );
+    final capsuleColor = tester.widget<ColoredBox>(
+      find.descendant(of: capsule, matching: find.byType(ColoredBox)).first,
+    );
+    expect(capsuleColor.color, custom.withValues(alpha: 0.45));
+  });
+
+  testWidgets('collapsed bar follows a dynamic parent style change', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController(initialExpanded: false);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(collapsedBarHost(controller: controller));
+    await tester.pumpAndSettle();
+
+    DecoratedBox highlight() => tester.widget<DecoratedBox>(
+      find.byKey(
+        const ValueKey('cupertino-sidebar-collapsed-selection-highlight'),
+      ),
+    );
+    expect(
+      (highlight().decoration as BoxDecoration).color,
+      CupertinoTheme.of(
+        tester.element(find.text('Home')),
+      ).primaryColor.withValues(alpha: 0.14),
+    );
+
+    await tester.pumpWidget(
+      collapsedBarHost(
+        controller: controller,
+        style: CupertinoSidebarStyle.liquidEdge,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      (highlight().decoration as BoxDecoration).color?.toARGB32(),
+      0xFFE0E6EC,
+    );
+  });
+
+  testWidgets('edge collapsed bar accepts an independent item style', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController(initialExpanded: false);
+    addTearDown(controller.dispose);
+    const selected = Color(0xFF123456);
+    const selectedForeground = Color(0xFF654321);
+    const foreground = Color(0xFF345612);
+
+    await tester.pumpWidget(
+      collapsedBarHost(
+        controller: controller,
+        style: CupertinoSidebarStyle.liquidEdge,
+        collapsedBarItemStyle: const CupertinoSidebarItemStyle(
+          selectedColor: selected,
+          selectedForegroundColor: selectedForeground,
+          foregroundColor: foreground,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final highlight = tester.widget<DecoratedBox>(
+      find.byKey(
+        const ValueKey('cupertino-sidebar-collapsed-selection-highlight'),
+      ),
+    );
+    expect((highlight.decoration as BoxDecoration).color, selected);
+    expect(
+      tester.widget<Text>(find.text('Home')).style?.color,
+      selectedForeground,
+    );
+    expect(tester.widget<Text>(find.text('Search')).style?.color, foreground);
+  });
+
   testWidgets('collapsed bar selects nothing when selectedIndex is null', (
     tester,
   ) async {
@@ -902,6 +1051,8 @@ Widget collapsedBarHost({
   TextDirection textDirection = TextDirection.ltr,
   CupertinoSidebarCollapsedBarTransitionBuilder? transitionBuilder,
   CupertinoSidebarStyle style = CupertinoSidebarStyle.liquid,
+  Color? backgroundColor,
+  CupertinoSidebarItemStyle? collapsedBarItemStyle,
   CupertinoSidebarToolbarGeometry toolbarGeometry =
       CupertinoSidebarToolbarGeometry.standard,
   double? minimumDestinationExtent,
@@ -926,6 +1077,7 @@ Widget collapsedBarHost({
               collapsedBarController: collapsedBarController,
               collapsedBarPlacement: collapsedBarPlacement,
               style: style,
+              backgroundColor: backgroundColor,
               toolbarGeometry: toolbarGeometry,
               content: const SizedBox.shrink(),
               collapsedBarHeight: collapsedBarHeight,
@@ -942,6 +1094,7 @@ Widget collapsedBarHost({
                     ? controller.selection.primaryIndex
                     : selectedIndex,
                 showIcons: showIcons,
+                itemStyle: collapsedBarItemStyle,
                 height: effectiveCollapsedBarHeight,
                 onDestinationSelected: (index) =>
                     controller.select(SidebarPrimarySelection(index)),

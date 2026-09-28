@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Match the collapsed edge bar to the iPadOS 27 Files light/dark glass,
+  neutral selection, and accent-label treatment while preserving liquid
+  defaults and the measured 44pt/36pt geometry.
+- Propagate the parent `CupertinoSidebarStyle` and edge background override to
+  the supplied collapsed bar without adding a required caller parameter.
 - Match the default Cupertino edge sidebar fill to iPadOS 27 in light and dark
   modes.
 - Add `CupertinoSidebar.backgroundColor` with plain and dynamic color support.

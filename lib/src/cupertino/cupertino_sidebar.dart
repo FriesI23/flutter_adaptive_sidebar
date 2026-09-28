@@ -200,7 +200,7 @@ class CupertinoSidebar extends StatefulWidget {
 
   /// The sidebar presentation inherited by descendants in [context].
   static CupertinoSidebarStyle styleOf(BuildContext context) {
-    return _CupertinoSidebarMode.styleOf(context);
+    return CupertinoSidebarStyleScope.styleOf(context);
   }
 
   /// Shared selection, visibility, and width.
@@ -617,25 +617,33 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
         final toggleInCapsule = collapsedBarEnabled && expandedProgress == 0;
         final capsule = collapsedBar == null
             ? null
-            : CupertinoSidebarCollapsedCapsule(
-                backgroundColor: collapsedBarGlass,
-                minimumBodyExtent: widget.collapsedBarMinimumDestinationExtent,
-                height: widget.collapsedBarHeight,
-                showSeparator: widget.collapsedBarSeparator,
-                leading: toggleInCapsule
-                    ? CupertinoSidebarButton(
-                        focusNode: _toggleFocusNode,
-                        label: expandNavigationLabel,
-                        onPressed: _controller.toggleExpanded,
-                        buttonKey: const ValueKey('cupertino-sidebar-toggle'),
-                        tooltipBuilder: widget.tooltipBuilder,
-                        extent: widget.collapsedBarHeight,
-                        iconSize: _kCollapsedBarGlyphSize,
-                      )
-                    : _CollapsedTogglePlaceholder(
-                        extent: widget.collapsedBarHeight,
-                      ),
-                child: collapsedBar,
+            : CupertinoSidebarStyleScope(
+                style: widget.style,
+                child: CupertinoSidebarCollapsedCapsule(
+                  style: widget.style,
+                  backgroundColor:
+                      widget.style == CupertinoSidebarStyle.liquidEdge
+                      ? widget.backgroundColor
+                      : collapsedBarGlass,
+                  minimumBodyExtent:
+                      widget.collapsedBarMinimumDestinationExtent,
+                  height: widget.collapsedBarHeight,
+                  showSeparator: widget.collapsedBarSeparator,
+                  leading: toggleInCapsule
+                      ? CupertinoSidebarButton(
+                          focusNode: _toggleFocusNode,
+                          label: expandNavigationLabel,
+                          onPressed: _controller.toggleExpanded,
+                          buttonKey: const ValueKey('cupertino-sidebar-toggle'),
+                          tooltipBuilder: widget.tooltipBuilder,
+                          extent: widget.collapsedBarHeight,
+                          iconSize: _kCollapsedBarGlyphSize,
+                        )
+                      : _CollapsedTogglePlaceholder(
+                          extent: widget.collapsedBarHeight,
+                        ),
+                  child: collapsedBar,
+                ),
               );
         final branch = _CupertinoSidebarBranch(
           occupiedSpan:
@@ -711,7 +719,7 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
                     contentActive: expandedProgress == 1,
                     content: CupertinoSidebarInteractionScope(
                       outsideTapGeneration: _outsideTapGeneration,
-                      child: _CupertinoSidebarMode(
+                      child: CupertinoSidebarStyleScope(
                         style: widget.style,
                         child: widget.content,
                       ),
@@ -1078,23 +1086,6 @@ class _CollapsedTogglePlaceholder extends StatelessWidget {
         color: CupertinoTheme.of(context).primaryColor,
       ),
     );
-  }
-}
-
-class _CupertinoSidebarMode extends InheritedWidget {
-  const _CupertinoSidebarMode({required this.style, required super.child});
-
-  final CupertinoSidebarStyle style;
-
-  static CupertinoSidebarStyle styleOf(BuildContext context) {
-    final scope = context
-        .dependOnInheritedWidgetOfExactType<_CupertinoSidebarMode>();
-    return scope?.style ?? CupertinoSidebarStyle.liquid;
-  }
-
-  @override
-  bool updateShouldNotify(_CupertinoSidebarMode oldWidget) {
-    return style != oldWidget.style;
   }
 }
 

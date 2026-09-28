@@ -17,6 +17,35 @@ const double kCupertinoSidebarCollapsedBarMeasuredHeight = 44;
 
 const double _kCollapsedBarSelectionHeight = 36;
 
+const double _kCollapsedBarEdgeFillAlpha = 0.45;
+
+// Tuned from composited iPadOS 27.0 Files screenshots at 2x scale. These are
+// deliberately separate from the vertical edge Sidebar colors: the native
+// collapsed tab surface keeps an accent label over a darker neutral thumb.
+const _cupertinoCollapsedEdgeSelectedColor =
+    CupertinoDynamicColor.withBrightness(
+      debugLabel: 'cupertinoCollapsedEdgeSelected',
+      color: Color(0xFFE0E6EC),
+      darkColor: Color(0xFF070E13),
+    );
+
+const _cupertinoCollapsedEdgeSurfaceColor =
+    CupertinoDynamicColor.withBrightness(
+      debugLabel: 'cupertinoCollapsedEdgeSurface',
+      color: Color(0xFFFBFCFD),
+      darkColor: Color(0xFF3E3E3E),
+    );
+
+const _cupertinoCollapsedEdgeBorderColor = CupertinoDynamicColor.withBrightness(
+  debugLabel: 'cupertinoCollapsedEdgeBorder',
+  color: Color(0x26000000),
+  darkColor: Color(0x38FFFFFF),
+);
+
+const _cupertinoCollapsedEdgeShadow = <BoxShadow>[
+  BoxShadow(color: Color(0x18000000), blurRadius: 12, offset: Offset(0, 2)),
+];
+
 /// Minimum destination width of the measured collapsed capsule.
 ///
 /// Scaled from the reference segment using
@@ -94,12 +123,20 @@ class CupertinoSidebarCollapsedBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final style = CupertinoSidebarStyleScope.styleOf(context);
     final primaryColor = CupertinoTheme.of(context).primaryColor;
+    final fallbackHighlight = switch (style) {
+      CupertinoSidebarStyle.liquid => primaryColor.withValues(alpha: 0.14),
+      CupertinoSidebarStyle.liquidEdge => CupertinoDynamicColor.resolve(
+        _cupertinoCollapsedEdgeSelectedColor,
+        context,
+      ),
+    };
     final highlight = CupertinoSidebarItemStyle.backgroundColorOf(
       itemStyle,
       context,
       states: const {WidgetState.selected},
-      fallback: primaryColor.withValues(alpha: 0.14),
+      fallback: fallbackHighlight,
     )!;
     return _DraggableCollapsedSelection(
       selectedIndex: selectedIndex,
@@ -151,18 +188,19 @@ class _CollapsedDestination extends StatelessWidget {
       context,
     );
     final states = <WidgetState>{if (selected) WidgetState.selected};
+    final selectedForeground = primaryColor.withValues(alpha: 1);
     final foregroundColor = CupertinoSidebarItemStyle.labelColorOf(
       itemStyle,
       context: context,
       states: states,
-      selectedFallback: primaryColor.withValues(alpha: 1),
+      selectedFallback: selectedForeground,
       unselectedFallback: labelColor.withValues(alpha: 1),
     );
     final iconColor = CupertinoSidebarItemStyle.iconColorOf(
       itemStyle,
       context: context,
       states: states,
-      selectedFallback: primaryColor.withValues(alpha: 1),
+      selectedFallback: selectedForeground,
       unselectedFallback: labelColor.withValues(alpha: 1),
     );
     final icon = selected
@@ -639,6 +677,7 @@ class CupertinoSidebarCollapsedCapsule extends StatelessWidget {
     super.key,
     required this.leading,
     required this.child,
+    required this.style,
     required this.backgroundColor,
     required this.minimumBodyExtent,
     required this.height,
@@ -651,8 +690,13 @@ class CupertinoSidebarCollapsedCapsule extends StatelessWidget {
   /// Destinations laid out after [leading].
   final Widget child;
 
-  /// Translucent fill. An opaque color skips the backdrop blur.
-  final Color backgroundColor;
+  /// Sidebar style used to resolve this collapsed surface.
+  final CupertinoSidebarStyle style;
+
+  /// Optional tint. Null uses the measured edge preset.
+  ///
+  /// Liquid callers provide their already-resolved theme bar tint.
+  final Color? backgroundColor;
 
   /// Minimum width of [child], after [leading].
   final double minimumBodyExtent;
@@ -665,14 +709,41 @@ class CupertinoSidebarCollapsedCapsule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const glass = CupertinoSidebarChrome.liquid;
+    final edge = style == CupertinoSidebarStyle.liquidEdge;
+    final sourceBackground = edge
+        ? backgroundColor ??
+              CupertinoDynamicColor.resolve(
+                _cupertinoCollapsedEdgeSurfaceColor,
+                context,
+              )
+        : backgroundColor!;
+    final resolvedBackground = CupertinoDynamicColor.resolve(
+      sourceBackground,
+      context,
+    );
+    final effectiveBackground = edge
+        ? resolvedBackground.withValues(
+            alpha: math.min(resolvedBackground.a, _kCollapsedBarEdgeFillAlpha),
+          )
+        : resolvedBackground;
+    final border = edge
+        ? Border.all(
+            color: CupertinoDynamicColor.resolve(
+              _cupertinoCollapsedEdgeBorderColor,
+              context,
+            ),
+            width: 0.5,
+          )
+        : CupertinoSidebarChrome.liquid.border.resolve(context);
     return CupertinoFloatingGlassSurface(
       key: const ValueKey('cupertino-sidebar-collapsed-capsule'),
-      backgroundColor: backgroundColor,
+      backgroundColor: effectiveBackground,
       borderRadius: BorderRadius.circular(height / 2),
-      blurSigma: glass.blurSigma,
-      boxShadow: glass.boxShadow,
-      border: glass.border.resolve(context),
+      blurSigma: CupertinoSidebarChrome.liquid.blurSigma,
+      boxShadow: edge
+          ? _cupertinoCollapsedEdgeShadow
+          : CupertinoSidebarChrome.liquid.boxShadow,
+      border: border,
       child: SizedBox(
         height: height,
         child: Padding(

@@ -92,6 +92,13 @@ an outside tap to return it to the neutral selection. Use
 `CupertinoSidebarItemStyle` and its `WidgetStateProperty` colors for state-aware
 theme overrides.
 
+When an edge Sidebar is collapsed, its horizontal bar automatically follows
+the iPadOS 27 Files treatment: the 44pt glass capsule remains floating, while
+the 36pt selection uses a neutral light/dark fill and an accent label. Liquid
+sidebars retain the original translucent-primary selection. A supplied
+`backgroundColor` also tints the edge collapsed capsule, and the collapsed
+bar's own `itemStyle` can override its destination colors independently.
+
 ## More examples
 
 <details>

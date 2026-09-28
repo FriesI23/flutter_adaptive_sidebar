@@ -30,6 +30,35 @@ enum CupertinoSidebarStyle {
   liquidEdge,
 }
 
+/// Internal inherited style shared by a sidebar and its supplied content.
+///
+/// This type is intentionally omitted from the package entrypoint. Public
+/// consumers resolve the value through `CupertinoSidebar.styleOf`.
+class CupertinoSidebarStyleScope extends InheritedWidget {
+  /// Creates a style scope.
+  const CupertinoSidebarStyleScope({
+    super.key,
+    required this.style,
+    required super.child,
+  });
+
+  /// The active sidebar presentation.
+  final CupertinoSidebarStyle style;
+
+  /// Resolves the closest style, defaulting to the established liquid preset.
+  static CupertinoSidebarStyle styleOf(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<CupertinoSidebarStyleScope>()
+            ?.style ??
+        CupertinoSidebarStyle.liquid;
+  }
+
+  @override
+  bool updateShouldNotify(CupertinoSidebarStyleScope oldWidget) {
+    return style != oldWidget.style;
+  }
+}
+
 /// Theme color and opacity for a sidebar glass fill.
 ///
 /// [color] is resolved with the current brightness, then [alpha] caps its
