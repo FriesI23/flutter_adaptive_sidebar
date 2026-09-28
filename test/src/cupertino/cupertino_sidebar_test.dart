@@ -795,7 +795,7 @@ void main() {
   });
 
   for (final (brightness, surface, selection) in [
-    (Brightness.light, 0x73FBFCFD, 0xFFE0E6EC),
+    (Brightness.light, 0x73FBFCFD, 0x12000000),
     (Brightness.dark, 0x733E3E3E, 0xFF070E13),
   ]) {
     testWidgets('edge collapsed bar uses iPadOS 27 $brightness colors', (
@@ -903,7 +903,7 @@ void main() {
 
     expect(
       (highlight().decoration as BoxDecoration).color?.toARGB32(),
-      0xFFE0E6EC,
+      0x12000000,
     );
   });
 

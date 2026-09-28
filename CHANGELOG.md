@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Keep the light Edge collapsed selection visible over tinted glass content by
+  preserving it as a neutral overlay instead of a fixed composited color.
+
 - Match the iPadOS 27 Edge Sidebar label transition: black to white in light
   appearance and white in both inactive and active dark states.
 

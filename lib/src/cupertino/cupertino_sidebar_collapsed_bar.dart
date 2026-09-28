@@ -19,13 +19,14 @@ const double _kCollapsedBarSelectionHeight = 36;
 
 const double _kCollapsedBarEdgeFillAlpha = 0.45;
 
-// Tuned from composited iPadOS 27.0 Files screenshots at 2x scale. These are
-// deliberately separate from the vertical edge Sidebar colors: the native
-// collapsed tab surface keeps an accent label over a darker neutral thumb.
+// Tuned from iPadOS 27.0 Files screenshots at 2x scale. The light reference
+// is a composited result, so keep it as a neutral overlay instead of an opaque
+// pixel color. This preserves the selection layer over tinted glass hosts.
+// The dark reference remains opaque because the native thumb is near-black.
 const _cupertinoCollapsedEdgeSelectedColor =
     CupertinoDynamicColor.withBrightness(
       debugLabel: 'cupertinoCollapsedEdgeSelected',
-      color: Color(0xFFE0E6EC),
+      color: Color(0x12000000),
       darkColor: Color(0xFF070E13),
     );
 
