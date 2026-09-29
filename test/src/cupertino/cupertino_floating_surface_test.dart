@@ -61,4 +61,31 @@ void main() {
         .single;
     expect(border.top.width, 0.5);
   });
+
+  testWidgets('can leave content unclipped while clipping the glass', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const CupertinoApp(
+        home: CupertinoFloatingGlassSurface(
+          backgroundColor: Color(0x80112233),
+          clipContent: false,
+          child: SizedBox(key: ValueKey('overflow-content'), width: 80),
+        ),
+      ),
+    );
+
+    final surface = tester.widget<CupertinoFloatingGlassSurface>(
+      find.byType(CupertinoFloatingGlassSurface),
+    );
+    expect(surface.clipContent, isFalse);
+    expect(find.byType(ClipRRect), findsOneWidget);
+    expect(
+      find.ancestor(
+        of: find.byKey(const ValueKey('overflow-content')),
+        matching: find.byType(ClipRRect),
+      ),
+      findsNothing,
+    );
+  });
 }

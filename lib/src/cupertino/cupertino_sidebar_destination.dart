@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 
 import '../adaptive_navigation_destination.dart';
+import 'cupertino_focus.dart';
 import 'cupertino_sidebar.dart';
 import 'cupertino_sidebar_chrome.dart';
 import 'cupertino_sidebar_item_style.dart';
@@ -24,7 +26,7 @@ class _CupertinoSidebarDestinationDefaults {
     required this.unselectedLabelColor,
     required this.activeLabelColor,
     required this.requestsFocusOnPointerDown,
-    required this.showsFocusBorder,
+    required this.showsFocusHalo,
   });
 
   factory _CupertinoSidebarDestinationDefaults.of(
@@ -34,6 +36,7 @@ class _CupertinoSidebarDestinationDefaults {
     final theme = CupertinoTheme.of(context);
     final primaryColor = theme.primaryColor.withValues(alpha: 1);
     const activeForegroundColor = CupertinoColors.white;
+    final usesHalo = defaultTargetPlatform == TargetPlatform.macOS;
     final labelColor = CupertinoDynamicColor.resolve(
       CupertinoColors.label,
       context,
@@ -41,7 +44,9 @@ class _CupertinoSidebarDestinationDefaults {
     return switch (style) {
       CupertinoSidebarStyle.liquid => _CupertinoSidebarDestinationDefaults(
         selectedBackgroundColor: primaryColor.withValues(alpha: 0.14),
-        activeBackgroundColor: null,
+        activeBackgroundColor: usesHalo
+            ? null
+            : primaryColor.withValues(alpha: 0.14),
         selectedIconColor: primaryColor,
         unselectedIconColor: labelColor,
         activeIconColor: null,
@@ -49,19 +54,19 @@ class _CupertinoSidebarDestinationDefaults {
         unselectedLabelColor: labelColor,
         activeLabelColor: null,
         requestsFocusOnPointerDown: false,
-        showsFocusBorder: true,
+        showsFocusHalo: usesHalo,
       ),
       CupertinoSidebarStyle.liquidEdge => _CupertinoSidebarDestinationDefaults(
         selectedBackgroundColor: primaryColor.withValues(alpha: 0.14),
-        activeBackgroundColor: primaryColor,
+        activeBackgroundColor: usesHalo ? null : primaryColor,
         selectedIconColor: primaryColor,
         unselectedIconColor: primaryColor,
-        activeIconColor: activeForegroundColor,
+        activeIconColor: usesHalo ? null : activeForegroundColor,
         selectedLabelColor: labelColor,
         unselectedLabelColor: labelColor,
-        activeLabelColor: activeForegroundColor,
-        requestsFocusOnPointerDown: true,
-        showsFocusBorder: false,
+        activeLabelColor: usesHalo ? null : activeForegroundColor,
+        requestsFocusOnPointerDown: !usesHalo,
+        showsFocusHalo: usesHalo,
       ),
     };
   }
@@ -75,7 +80,7 @@ class _CupertinoSidebarDestinationDefaults {
   final Color unselectedLabelColor;
   final Color? activeLabelColor;
   final bool requestsFocusOnPointerDown;
-  final bool showsFocusBorder;
+  final bool showsFocusHalo;
 
   Color? backgroundColor({required bool selected, required bool active}) {
     if (active && activeBackgroundColor != null) return activeBackgroundColor;
@@ -287,10 +292,8 @@ class _SidebarCapsuleButtonState extends State<_SidebarCapsuleButton> {
     final textStyle = CupertinoTheme.of(context).textTheme.actionTextStyle
         .merge(widget.labelStyle)
         .copyWith(color: foreground);
-    final focusColor = CupertinoTheme.of(
-      context,
-    ).primaryColor.withValues(alpha: 0.8);
-    return FocusableActionDetector(
+    final borderRadius = BorderRadius.circular(_kSelectionHeight / 2);
+    final focusable = FocusableActionDetector(
       mouseCursor: SystemMouseCursors.click,
       onFocusChange: _handleFocusChange,
       onShowHoverHighlight: _handleHoverChange,
@@ -321,12 +324,9 @@ class _SidebarCapsuleButtonState extends State<_SidebarCapsuleButton> {
               widget.onPressed();
             },
             child: DecoratedBox(
-              decoration: BoxDecoration(
+              decoration: ShapeDecoration(
                 color: background,
-                border: widget.defaults.showsFocusBorder && _showFocusHighlight
-                    ? Border.all(color: focusColor, width: 3)
-                    : null,
-                borderRadius: BorderRadius.circular(_kSelectionHeight / 2),
+                shape: RoundedSuperellipseBorder(borderRadius: borderRadius),
               ),
               child: SizedBox(
                 height: _kSelectionHeight,
@@ -353,6 +353,14 @@ class _SidebarCapsuleButtonState extends State<_SidebarCapsuleButton> {
           ),
         ),
       ),
+    );
+    return buildCupertinoSidebarFocusHalo(
+      context,
+      visible: widget.defaults.showsFocusHalo && _showFocusHighlight,
+      decoration: ShapeDecoration(
+        shape: RoundedSuperellipseBorder(borderRadius: borderRadius),
+      ),
+      child: focusable,
     );
   }
 }

@@ -1,11 +1,14 @@
 import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 
 import '../adaptive_navigation_destination.dart';
 import 'cupertino_floating_surface.dart';
+import 'cupertino_focus.dart';
+import 'cupertino_sidebar.dart';
 import 'cupertino_sidebar_chrome.dart';
 import 'cupertino_sidebar_item_style.dart';
 
@@ -135,7 +138,7 @@ class CupertinoSidebarCollapsedBar extends StatelessWidget {
   }
 }
 
-class _CollapsedDestination extends StatelessWidget {
+class _CollapsedDestination extends StatefulWidget {
   const _CollapsedDestination({
     super.key,
     required this.destination,
@@ -156,64 +159,114 @@ class _CollapsedDestination extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
+  State<_CollapsedDestination> createState() => _CollapsedDestinationState();
+}
+
+class _CollapsedDestinationState extends State<_CollapsedDestination> {
+  bool _showFocusHighlight = false;
+
+  void _handleShowFocusHighlight(bool value) {
+    if (_showFocusHighlight == value) return;
+    setState(() => _showFocusHighlight = value);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final style = CupertinoSidebar.styleOf(context);
+    final usesHalo = defaultTargetPlatform == TargetPlatform.macOS;
     final primaryColor = CupertinoTheme.of(context).primaryColor;
     final labelColor = CupertinoDynamicColor.resolve(
       CupertinoColors.label,
       context,
     );
-    final states = <WidgetState>{if (selected) WidgetState.selected};
+    final states = <WidgetState>{
+      if (widget.selected) WidgetState.selected,
+      if (!usesHalo && _showFocusHighlight) WidgetState.focused,
+    };
     final selectedForeground = primaryColor.withValues(alpha: 1);
+    final focusedBackground = switch (style) {
+      CupertinoSidebarStyle.liquid => primaryColor.withValues(alpha: 0.14),
+      CupertinoSidebarStyle.liquidEdge => primaryColor.withValues(alpha: 1),
+    };
+    final focusedForeground = switch (style) {
+      CupertinoSidebarStyle.liquid => selectedForeground,
+      CupertinoSidebarStyle.liquidEdge => CupertinoColors.white,
+    };
+    final background = !usesHalo && _showFocusHighlight
+        ? CupertinoSidebarItemStyle.backgroundColorOf(
+            widget.itemStyle,
+            context,
+            states: states,
+            fallback: focusedBackground,
+          )
+        : null;
     final foregroundColor = CupertinoSidebarItemStyle.labelColorOf(
-      itemStyle,
+      widget.itemStyle,
       context: context,
       states: states,
-      selectedFallback: selectedForeground,
+      selectedFallback: _showFocusHighlight && !usesHalo
+          ? focusedForeground
+          : selectedForeground,
       unselectedFallback: labelColor.withValues(alpha: 1),
     );
     final iconColor = CupertinoSidebarItemStyle.iconColorOf(
-      itemStyle,
+      widget.itemStyle,
       context: context,
       states: states,
-      selectedFallback: selectedForeground,
-      unselectedFallback: labelColor.withValues(alpha: 1),
+      selectedFallback: _showFocusHighlight && !usesHalo
+          ? focusedForeground
+          : selectedForeground,
+      unselectedFallback: _showFocusHighlight && !usesHalo
+          ? focusedForeground
+          : labelColor.withValues(alpha: 1),
     );
-    final icon = selected
-        ? destination.icons.cupertinoSelected
-        : destination.icons.cupertino;
-    final innerHeight = math.min(_kCollapsedBarSelectionHeight, height);
+    final icon = widget.selected
+        ? widget.destination.icons.cupertinoSelected
+        : widget.destination.icons.cupertino;
+    final innerHeight = math.min(_kCollapsedBarSelectionHeight, widget.height);
     final label = Text(
-      destination.label,
+      widget.destination.label,
       maxLines: 1,
       style: CupertinoSidebarItemStyle.labelStyleOf(
-        itemStyle,
+        widget.itemStyle,
         fallback: _kCollapsedBarLabelStyle,
         color: foregroundColor,
       ),
     );
-    return Semantics(
-      container: true,
-      button: true,
-      selected: selected,
-      label: destination.effectiveSemanticsLabel,
-      excludeSemantics: true,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minWidth: minimumExtent),
-        child: SizedBox(
-          height: height,
-          child: Align(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
+    final borderRadius = BorderRadius.circular(innerHeight / 2);
+    final focusable = FocusableActionDetector(
+      onShowFocusHighlight: _handleShowFocusHighlight,
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.onPressed();
+            return null;
+          },
+        ),
+      },
+      child: KeyedSubtree(
+        key: const ValueKey('cupertino-sidebar-collapsed-focus-surface'),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: math.max(0, widget.minimumExtent - 4),
+            minHeight: innerHeight,
+          ),
+          child: DecoratedBox(
+            decoration: ShapeDecoration(
+              color: background,
+              shape: RoundedSuperellipseBorder(borderRadius: borderRadius),
+            ),
+            child: ExcludeFocus(
               child: CupertinoButton(
-                minimumSize: Size(0, innerHeight),
+                minimumSize: Size.zero,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
-                borderRadius: BorderRadius.circular(innerHeight / 2),
+                borderRadius: borderRadius,
                 foregroundColor: foregroundColor,
-                onPressed: onPressed,
+                onPressed: widget.onPressed,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (showIcon) ...[
+                    if (widget.showIcon) ...[
                       IconTheme.merge(
                         data: IconThemeData(color: iconColor),
                         child: icon,
@@ -224,6 +277,33 @@ class _CollapsedDestination extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+    final focused = buildCupertinoSidebarFocusHalo(
+      context,
+      visible: usesHalo && _showFocusHighlight,
+      decoration: ShapeDecoration(
+        shape: RoundedSuperellipseBorder(borderRadius: borderRadius),
+      ),
+      child: focusable,
+    );
+    return Semantics(
+      container: true,
+      button: true,
+      selected: widget.selected,
+      label: widget.destination.effectiveSemanticsLabel,
+      excludeSemantics: true,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: widget.minimumExtent),
+        child: SizedBox(
+          height: widget.height,
+          child: Align(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: focused,
             ),
           ),
         ),
@@ -710,6 +790,7 @@ class CupertinoSidebarCollapsedCapsule extends StatelessWidget {
           ? _cupertinoCollapsedEdgeShadow
           : CupertinoSidebarChrome.liquid.boxShadow,
       border: border,
+      clipContent: false,
       child: SizedBox(
         height: height,
         child: Padding(

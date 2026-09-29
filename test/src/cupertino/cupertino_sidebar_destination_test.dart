@@ -104,8 +104,11 @@ void main() {
                   ),
                 )
                 .decoration
-            as BoxDecoration;
-    expect(decoration.border, isNull);
+            as ShapeDecoration;
+    expect(
+      (decoration.shape as RoundedSuperellipseBorder).side.style,
+      BorderStyle.none,
+    );
   });
 
   testWidgets('dark edge keeps unfocused and active theme-tint states', (
@@ -439,8 +442,12 @@ void _expectCapsule(WidgetTester tester) {
     ),
   );
   expect(
-    (box.decoration as BoxDecoration).borderRadius,
-    BorderRadius.circular(22),
+    (box.decoration as ShapeDecoration).shape,
+    isA<RoundedSuperellipseBorder>().having(
+      (shape) => shape.borderRadius,
+      'borderRadius',
+      BorderRadius.circular(22),
+    ),
   );
   expect(
     find.descendant(
@@ -463,7 +470,7 @@ Color _fill(WidgetTester tester) {
       matching: find.byType(DecoratedBox),
     ),
   );
-  return (box.decoration as BoxDecoration).color!;
+  return (box.decoration as ShapeDecoration).color!;
 }
 
 Color _labelColor(WidgetTester tester) {

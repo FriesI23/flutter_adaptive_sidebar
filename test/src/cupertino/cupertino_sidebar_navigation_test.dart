@@ -172,5 +172,9 @@ Color? _fill(WidgetTester tester, Finder destination) {
   final box = tester.widget<DecoratedBox>(
     find.descendant(of: destination, matching: find.byType(DecoratedBox)),
   );
-  return (box.decoration as BoxDecoration).color;
+  return switch (box.decoration) {
+    final BoxDecoration decoration => decoration.color,
+    final ShapeDecoration decoration => decoration.color,
+    _ => throw StateError('Unsupported destination decoration'),
+  };
 }

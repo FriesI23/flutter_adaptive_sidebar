@@ -200,6 +200,7 @@ class _SettingsValues {
     required this.customTooltip,
     required this.customLabels,
     required this.customContent,
+    required this.customFocusHalo,
   });
 
   final double preferredWidth;
@@ -211,6 +212,7 @@ class _SettingsValues {
   final bool customTooltip;
   final bool customLabels;
   final bool customContent;
+  final bool customFocusHalo;
 }
 
 class _ExampleBody extends StatelessWidget {
@@ -244,6 +246,7 @@ class _ExampleBody extends StatelessWidget {
     required this.onCustomTooltipChanged,
     required this.onCustomLabelsChanged,
     required this.onCustomContentChanged,
+    required this.onCustomFocusHaloChanged,
     required this.customSideStyle,
     required this.onCustomSideStyleChanged,
     required this.customBarStyle,
@@ -290,6 +293,7 @@ class _ExampleBody extends StatelessWidget {
   final ValueChanged<bool> onCustomTooltipChanged;
   final ValueChanged<bool> onCustomLabelsChanged;
   final ValueChanged<bool> onCustomContentChanged;
+  final ValueChanged<bool> onCustomFocusHaloChanged;
   final bool customSideStyle;
   final ValueChanged<bool> onCustomSideStyleChanged;
   final bool customBarStyle;
@@ -441,6 +445,7 @@ class _ExampleBody extends StatelessWidget {
           onCustomTooltipChanged: onCustomTooltipChanged,
           onCustomLabelsChanged: onCustomLabelsChanged,
           onCustomContentChanged: onCustomContentChanged,
+          onCustomFocusHaloChanged: onCustomFocusHaloChanged,
           customSideStyle: customSideStyle,
           onCustomSideStyleChanged: onCustomSideStyleChanged,
           customBarStyle: customBarStyle,
@@ -1686,6 +1691,7 @@ class _SettingsPage extends StatelessWidget {
     required this.onCustomTooltipChanged,
     required this.onCustomLabelsChanged,
     required this.onCustomContentChanged,
+    required this.onCustomFocusHaloChanged,
     required this.customSideStyle,
     required this.onCustomSideStyleChanged,
     required this.customBarStyle,
@@ -1719,6 +1725,7 @@ class _SettingsPage extends StatelessWidget {
   final ValueChanged<bool> onCustomTooltipChanged;
   final ValueChanged<bool> onCustomLabelsChanged;
   final ValueChanged<bool> onCustomContentChanged;
+  final ValueChanged<bool> onCustomFocusHaloChanged;
   final bool customSideStyle;
   final ValueChanged<bool> onCustomSideStyleChanged;
   final bool customBarStyle;
@@ -1763,6 +1770,12 @@ class _SettingsPage extends StatelessWidget {
             label: 'Custom bar style',
             value: customBarStyle,
             onChanged: onCustomBarStyleChanged,
+          ),
+          _SwitchControl(
+            style: style,
+            label: 'Custom focus halo',
+            value: settings.customFocusHalo,
+            onChanged: onCustomFocusHaloChanged,
           ),
         ],
         _WidthControl(

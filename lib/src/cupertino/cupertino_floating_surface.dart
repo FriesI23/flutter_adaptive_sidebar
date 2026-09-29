@@ -16,6 +16,7 @@ class CupertinoFloatingGlassSurface extends StatelessWidget {
     this.blurSigma = 10,
     this.boxShadow = const <BoxShadow>[],
     this.border,
+    this.clipContent = true,
   });
 
   /// Content painted above the translucent surface.
@@ -36,6 +37,13 @@ class CupertinoFloatingGlassSurface extends StatelessWidget {
   /// Border painted over the surface. Null draws none.
   final BoxBorder? border;
 
+  /// Whether [child] is clipped to [borderRadius] with the glass background.
+  ///
+  /// Set this to false when the child paints accessibility feedback, such as
+  /// a keyboard focus halo, outside its layout bounds. The background, blur,
+  /// and border remain clipped to the configured shape.
+  final bool clipContent;
+
   @override
   Widget build(BuildContext context) {
     final resolvedBackground =
@@ -44,17 +52,30 @@ class CupertinoFloatingGlassSurface extends StatelessWidget {
           CupertinoTheme.of(context).barBackgroundColor,
           context,
         );
-    Widget surface = ColoredBox(color: resolvedBackground, child: child);
+    Widget surface = ColoredBox(
+      color: resolvedBackground,
+      child: clipContent ? child : const SizedBox.expand(),
+    );
     if (resolvedBackground.a != 1.0 && blurSigma > 0) {
       surface = BackdropFilter(
         filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
         child: surface,
       );
     }
-    Widget clippedSurface = ClipRRect(
+    final clippedBackground = ClipRRect(
       borderRadius: borderRadius,
       child: surface,
     );
+    Widget clippedSurface = clipContent
+        ? clippedBackground
+        : Stack(
+            clipBehavior: Clip.none,
+            fit: StackFit.passthrough,
+            children: [
+              Positioned.fill(child: clippedBackground),
+              child,
+            ],
+          );
     final resolvedBorder = border;
     if (resolvedBorder != null) {
       // A one-sided separator cannot share a radius with BoxDecoration.

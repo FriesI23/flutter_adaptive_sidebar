@@ -111,6 +111,7 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
   bool _customContent = false;
   bool _customSideStyle = false;
   bool _customBarStyle = false;
+  bool _customFocusHalo = false;
   String? _customPageTitle;
   bool _placementDemoVisible = false;
   TextDirection _textDirection = TextDirection.ltr;
@@ -428,6 +429,7 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
         customTooltip: _customTooltip,
         customLabels: _customLabels,
         customContent: _customContent,
+        customFocusHalo: _customFocusHalo,
       ),
       toolbarGeometry: _toolbarGeometry,
       toolbarTopInsetMode: _toolbarTopInsetMode,
@@ -454,6 +456,8 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
       onCustomTooltipChanged: (value) => setState(() => _customTooltip = value),
       onCustomLabelsChanged: (value) => setState(() => _customLabels = value),
       onCustomContentChanged: (value) => setState(() => _customContent = value),
+      onCustomFocusHaloChanged: (value) =>
+          setState(() => _customFocusHalo = value),
       customSideStyle: _customSideStyle,
       onCustomSideStyleChanged: (value) =>
           setState(() => _customSideStyle = value),
@@ -523,9 +527,50 @@ class _AdaptiveSidebarExampleState extends State<AdaptiveSidebarExample> {
       );
     }
 
-    return Directionality(
-      textDirection: _textDirection,
-      child: _ExampleBackground(themeColor: widget.themeColor, child: page),
+    final theme = Theme.of(context);
+    final sidebarTheme = CupertinoSidebarThemeData.of(context);
+    return Theme(
+      data: theme.copyWith(
+        extensions: [
+          ...theme.extensions.values.where(
+            (extension) => extension is! CupertinoSidebarThemeData,
+          ),
+          CupertinoSidebarThemeData(
+            edgeBackgroundColor: sidebarTheme.edgeBackgroundColor,
+            focusHaloBuilder: _customFocusHalo ? _buildCustomFocusHalo : null,
+          ),
+        ],
+      ),
+      child: Directionality(
+        textDirection: _textDirection,
+        child: _ExampleBackground(themeColor: widget.themeColor, child: page),
+      ),
     );
   }
 }
+
+Widget _buildCustomFocusHalo(
+  BuildContext context, {
+  required Widget child,
+  required bool visible,
+  required ShapeDecoration decoration,
+}) => DecoratedBox(
+  key: const ValueKey('custom-sidebar-focus-halo'),
+  position: DecorationPosition.foreground,
+  decoration: ShapeDecoration(
+    color: decoration.color,
+    image: decoration.image,
+    gradient: decoration.gradient,
+    shadows: decoration.shadows,
+    shape: (decoration.shape as OutlinedBorder).copyWith(
+      side: visible
+          ? const BorderSide(
+              color: CupertinoColors.systemOrange,
+              width: 2.5,
+              strokeAlign: BorderSide.strokeAlignOutside,
+            )
+          : BorderSide.none,
+    ),
+  ),
+  child: child,
+);

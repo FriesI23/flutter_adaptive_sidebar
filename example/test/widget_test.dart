@@ -58,8 +58,13 @@ void main() {
         matching: find.byType(DecoratedBox),
       ),
     );
+    final sideHighlightColor = switch (sideHighlight.decoration) {
+      BoxDecoration(:final color) => color,
+      ShapeDecoration(:final color) => color,
+      _ => null,
+    };
     expect(
-      (sideHighlight.decoration as BoxDecoration).color,
+      sideHighlightColor,
       CupertinoColors.systemPurple.withValues(alpha: 0.14),
     );
     final surface = find.byKey(const ValueKey('cupertino-sidebar-surface'));
@@ -429,6 +434,66 @@ void main() {
       Brightness.dark,
     );
     expect(find.byType(CupertinoSwitch), findsWidgets);
+  });
+
+  testWidgets('Cupertino settings toggle the custom focus halo theme', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const AdaptiveSidebarExampleApp(cupertino: true));
+    await tester.pumpAndSettle();
+    expect(
+      Theme.of(
+        tester.element(
+          find.byKey(const ValueKey('cupertino-sidebar-destination-0')),
+        ),
+      ).extension<CupertinoSidebarThemeData>()!.focusHaloBuilder,
+      isNull,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('cupertino-sidebar-auxiliary-destination-0')),
+    );
+    await tester.pumpAndSettle();
+    final label = find.text('Custom focus halo');
+    await tester.ensureVisible(label);
+    final toggle = find.descendant(
+      of: find.ancestor(of: label, matching: find.byType(Row)).first,
+      matching: find.byType(CupertinoSwitch),
+    );
+    expect(tester.widget<CupertinoSwitch>(toggle).value, isFalse);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+
+    final destination = find.byKey(
+      const ValueKey('cupertino-sidebar-destination-0'),
+    );
+    final destinationContext = tester.element(destination);
+    final builder = Theme.of(
+      destinationContext,
+    ).extension<CupertinoSidebarThemeData>()!.focusHaloBuilder;
+    expect(builder, isNotNull);
+    final halo = builder!(
+      destinationContext,
+      child: const SizedBox(width: 100, height: 40),
+      visible: true,
+      decoration: ShapeDecoration(
+        shape: RoundedSuperellipseBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+    );
+    await tester.pumpWidget(CupertinoApp(home: Center(child: halo)));
+
+    final focusedHalo = tester.widget<DecoratedBox>(
+      find.byKey(const ValueKey('custom-sidebar-focus-halo')),
+    );
+    final focusedShape =
+        (focusedHalo.decoration as ShapeDecoration).shape as OutlinedBorder;
+    expect(focusedShape.side.color, CupertinoColors.systemOrange);
   });
 
   testWidgets('auto collapses once the window is narrower than 800', (
