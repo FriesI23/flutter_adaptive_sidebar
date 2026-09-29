@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Use Flutter's native Cupertino focus halo for expanded and collapsed sidebar
+  destinations on macOS.
+- Use platform-appropriate focused destination fills on iOS and iPadOS.
+- Add `CupertinoSidebarThemeData.focusHaloBuilder` so apps can customize the
+  macOS focus treatment while the package retains focus semantics.
+
 ## 0.2.0
 
 - Align the Cupertino edge sidebar and collapsed bar with the iPadOS 27
