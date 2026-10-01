@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1
+
+- Added Cupertino sidebar toggle builder overrides for the interactive button
+  and collapsed-bar transition placeholder while retaining package defaults.
+
 ## 0.3.0
 
 - Use Flutter's native Cupertino focus halo for expanded and collapsed sidebar
