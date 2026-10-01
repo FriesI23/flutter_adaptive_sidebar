@@ -132,6 +132,7 @@ class CupertinoSidebar extends StatefulWidget {
     this.expandLabel,
     this.collapseLabel,
     this.tooltipBuilder,
+    this.toggleButtonBuilder,
     this.backgroundColor,
     this.scaffoldBackgroundColor,
   }) : // Keep the public override name while storing its nullable const value.
@@ -166,6 +167,7 @@ class CupertinoSidebar extends StatefulWidget {
     String? expandLabel,
     String? collapseLabel,
     NavigationTooltipBuilder? tooltipBuilder,
+    CupertinoSidebarToggleBuilder? toggleButtonBuilder,
     Color? backgroundColor,
     Color? scaffoldBackgroundColor,
   }) : this(
@@ -188,6 +190,7 @@ class CupertinoSidebar extends StatefulWidget {
          expandLabel: expandLabel,
          collapseLabel: collapseLabel,
          tooltipBuilder: tooltipBuilder,
+         toggleButtonBuilder: toggleButtonBuilder,
          backgroundColor: backgroundColor,
          scaffoldBackgroundColor: scaffoldBackgroundColor,
        );
@@ -309,6 +312,13 @@ class CupertinoSidebar extends StatefulWidget {
 
   /// Optional tooltip wrapper for the show and hide button.
   final NavigationTooltipBuilder? tooltipBuilder;
+
+  /// Optional presentation override for the package-default toggle.
+  ///
+  /// This is applied to both the interactive button and its collapsed-bar
+  /// transition placeholder. Call the supplied default builder from a
+  /// descendant context to retain package-owned behavior.
+  final CupertinoSidebarToggleBuilder? toggleButtonBuilder;
 
   /// Background color of the expanded sidebar surface.
   ///
@@ -649,11 +659,13 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
                           onPressed: _controller.toggleExpanded,
                           buttonKey: const ValueKey('cupertino-sidebar-toggle'),
                           tooltipBuilder: widget.tooltipBuilder,
+                          builder: widget.toggleButtonBuilder,
                           extent: widget.collapsedBarHeight,
                           iconSize: _kCollapsedBarGlyphSize,
                         )
                       : _CollapsedTogglePlaceholder(
                           extent: widget.collapsedBarHeight,
+                          builder: widget.toggleButtonBuilder,
                         ),
                   child: collapsedBar,
                 ),
@@ -765,6 +777,7 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
                       onPressed: _controller.toggleExpanded,
                       buttonKey: const ValueKey('cupertino-sidebar-toggle'),
                       tooltipBuilder: widget.tooltipBuilder,
+                      builder: widget.toggleButtonBuilder,
                     ),
                   ),
                 ),
@@ -1081,12 +1094,17 @@ class CupertinoSidebarMiddle extends StatelessWidget {
 }
 
 class _CollapsedTogglePlaceholder extends StatelessWidget {
-  const _CollapsedTogglePlaceholder({required this.extent});
+  const _CollapsedTogglePlaceholder({required this.extent, this.builder});
 
   final double extent;
+  final CupertinoSidebarToggleBuilder? builder;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      builder?.call(context, _buildDefaultPlaceholder) ??
+      _buildDefaultPlaceholder(context);
+
+  Widget _buildDefaultPlaceholder(BuildContext context) {
     final direction = Directionality.of(context);
     return SizedBox(
       width: extent,

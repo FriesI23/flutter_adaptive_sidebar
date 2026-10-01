@@ -30,6 +30,39 @@ void main() {
     expect(presses, 1);
   });
 
+  testWidgets('button builder can wrap the package default', (tester) async {
+    final focusNode = FocusNode();
+    addTearDown(focusNode.dispose);
+
+    await tester.pumpWidget(
+      CupertinoApp(
+        theme: const CupertinoThemeData(
+          primaryColor: CupertinoColors.systemPurple,
+        ),
+        home: CupertinoSidebarButton(
+          focusNode: focusNode,
+          label: 'Show sidebar',
+          onPressed: () {},
+          buttonKey: const ValueKey('toggle'),
+          builder: (context, defaultBuilder) => CupertinoTheme(
+            data: CupertinoTheme.of(
+              context,
+            ).copyWith(primaryColor: CupertinoColors.systemGreen),
+            child: Builder(builder: defaultBuilder),
+          ),
+        ),
+      ),
+    );
+
+    final icon = find.byIcon(CupertinoIcons.sidebar_left);
+    final iconContext = tester.element(icon);
+    expect(
+      IconTheme.of(iconContext).color,
+      CupertinoDynamicColor.resolve(CupertinoColors.systemGreen, iconContext),
+    );
+    expect(find.byType(CupertinoButton), findsOneWidget);
+  });
+
   testWidgets('sidebar uses the supplied tooltip builder', (tester) async {
     useLargeTestWindow(tester);
     final controller = AdaptiveNavigationController();

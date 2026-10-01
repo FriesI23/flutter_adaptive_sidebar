@@ -2,6 +2,20 @@ import 'package:flutter/cupertino.dart';
 
 import '../sidebar_constants.dart';
 
+/// Builds the package-default Cupertino sidebar toggle in [context].
+typedef CupertinoSidebarToggleDefaultBuilder =
+    Widget Function(BuildContext context);
+
+/// Optionally wraps or replaces the Cupertino sidebar toggle presentation.
+///
+/// Call [defaultBuilder] from a descendant [BuildContext] to retain the
+/// package-owned button, semantics, focus, tooltip, and interaction behavior.
+typedef CupertinoSidebarToggleBuilder =
+    Widget Function(
+      BuildContext context,
+      CupertinoSidebarToggleDefaultBuilder defaultBuilder,
+    );
+
 /// Button that shows or hides the Cupertino sidebar.
 class CupertinoSidebarButton extends StatelessWidget {
   /// Creates a sidebar toggle button.
@@ -12,6 +26,7 @@ class CupertinoSidebarButton extends StatelessWidget {
     required this.onPressed,
     required this.buttonKey,
     this.tooltipBuilder,
+    this.builder,
     this.extent = kMinInteractiveDimensionCupertino,
     this.iconSize,
   });
@@ -31,6 +46,9 @@ class CupertinoSidebarButton extends StatelessWidget {
   /// Optional tooltip wrapper. Cupertino does not supply a Material tooltip.
   final NavigationTooltipBuilder? tooltipBuilder;
 
+  /// Optional presentation override for the package-default toggle.
+  final CupertinoSidebarToggleBuilder? builder;
+
   /// Square size of the button. The collapsed capsule passes its height.
   final double extent;
 
@@ -38,7 +56,11 @@ class CupertinoSidebarButton extends StatelessWidget {
   final double? iconSize;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      builder?.call(context, _buildDefaultButton) ??
+      _buildDefaultButton(context);
+
+  Widget _buildDefaultButton(BuildContext context) {
     final direction = Directionality.of(context);
     final button = CupertinoButton(
       key: buttonKey,
@@ -58,8 +80,8 @@ class CupertinoSidebarButton extends StatelessWidget {
         ),
       ),
     );
-    final builder = tooltipBuilder;
-    if (builder == null) return button;
-    return builder(context, label, button);
+    final tooltipBuilder = this.tooltipBuilder;
+    if (tooltipBuilder == null) return button;
+    return tooltipBuilder(context, label, button);
   }
 }

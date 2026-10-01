@@ -359,6 +359,54 @@ void main() {
     },
   );
 
+  testWidgets('toggle builder covers the button and transition placeholder', (
+    tester,
+  ) async {
+    useLargeTestWindow(tester);
+    final controller = AdaptiveNavigationController(initialExpanded: false);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      collapsedBarHost(
+        controller: controller,
+        collapsedBarPlacement:
+            CupertinoSidebarCollapsedBarPlacement.fixedToolbar,
+        theme: const CupertinoThemeData(
+          primaryColor: CupertinoColors.systemPurple,
+        ),
+        toggleButtonBuilder: (context, defaultBuilder) => CupertinoTheme(
+          data: CupertinoTheme.of(
+            context,
+          ).copyWith(primaryColor: CupertinoColors.systemGreen),
+          child: Builder(builder: defaultBuilder),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final glyphs = find.byIcon(CupertinoIcons.sidebar_left);
+    expect(glyphs, findsOneWidget);
+    for (final element in glyphs.evaluate()) {
+      final icon = element.widget as Icon;
+      expect(
+        icon.color ?? IconTheme.of(element).color,
+        CupertinoDynamicColor.resolve(CupertinoColors.systemGreen, element),
+      );
+    }
+
+    controller.expanded = true;
+    await tester.pumpAndSettle();
+
+    expect(glyphs, findsNWidgets(2));
+    for (final element in glyphs.evaluate()) {
+      final icon = element.widget as Icon;
+      expect(
+        icon.color ?? IconTheme.of(element).color,
+        CupertinoDynamicColor.resolve(CupertinoColors.systemGreen, element),
+      );
+    }
+  });
+
   testWidgets('fixed collapsed bar centers in an LTR edge toolbar', (
     tester,
   ) async {
@@ -1080,6 +1128,7 @@ Widget collapsedBarHost({
   bool showIcons = false,
   bool selectFromController = true,
   int? selectedIndex,
+  CupertinoSidebarToggleBuilder? toggleButtonBuilder,
 }) {
   final effectiveCollapsedBarHeight =
       collapsedBarHeight ?? toolbarGeometry.collapsedBarHeight;
@@ -1108,6 +1157,7 @@ Widget collapsedBarHost({
               collapsedBarTransitionBuilder:
                   transitionBuilder ??
                   CupertinoSidebarCollapsedBarTransition.drop,
+              toggleButtonBuilder: toggleButtonBuilder,
               collapsedBar: CupertinoSidebarCollapsedBar(
                 destinations: destinations,
                 selectedIndex: selectFromController
