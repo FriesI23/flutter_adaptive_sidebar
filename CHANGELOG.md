@@ -1,9 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.3.2
 
 - Raise the example deployment targets to iOS 15 and macOS 12 for Xcode 27.
-
 - Keep selected Material rail hover, focus, and press feedback visible and
   follow NavigationBar theme overlay colors.
 
