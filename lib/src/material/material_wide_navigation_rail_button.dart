@@ -201,63 +201,74 @@ class _MaterialWideNavigationRailButtonSurface extends StatelessWidget {
       label: destination.effectiveSemanticsLabel,
       excludeSemantics: true,
       onTap: onPressed,
-      child: TextButton(
-        onPressed: onPressed,
-        style: const ButtonStyle(
-          padding: WidgetStatePropertyAll(EdgeInsets.zero),
-          minimumSize: WidgetStatePropertyAll(Size.zero),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          shape: WidgetStatePropertyAll(StadiumBorder()),
-        ),
-        child: Stack(
-          children: [
-            _MaterialWideNavigationRailIndicator(
-              selected: selected,
-              color: indicatorColor,
-              shape: indicatorShape,
-            ),
-            PositionedDirectional(
-              start: iconStart,
-              top: iconTop,
-              width: MaterialWideNavigationRailButton._iconSize,
-              height: MaterialWideNavigationRailButton._iconSize,
-              child: _MaterialWideNavigationRailIcon(
-                destination: destination,
-                selected: selected,
-                selectedTheme: _iconTheme(
-                  selectedIconTheme,
-                  itemStyle?.selectedForegroundColor,
-                ),
-                unselectedTheme: _iconTheme(
-                  unselectedIconTheme,
-                  itemStyle?.foregroundColor,
+      child: Stack(
+        children: [
+          _MaterialWideNavigationRailIndicator(
+            selected: selected,
+            color: indicatorColor,
+            shape: indicatorShape,
+          ),
+          // Keep the button's Material above the opaque selection indicator
+          // so hover, focus, and splash ink remain visible when selected.
+          Positioned.fill(
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: onPressed,
+                customBorder: indicatorShape,
+                highlightColor: Colors.transparent,
+                overlayColor: NavigationBarTheme.of(context).overlayColor,
+                child: Stack(
+                  children: [
+                    PositionedDirectional(
+                      start: iconStart,
+                      top: iconTop,
+                      width: MaterialWideNavigationRailButton._iconSize,
+                      height: MaterialWideNavigationRailButton._iconSize,
+                      child: _MaterialWideNavigationRailIcon(
+                        destination: destination,
+                        selected: selected,
+                        selectedTheme: _iconTheme(
+                          selectedIconTheme,
+                          itemStyle?.selectedForegroundColor,
+                        ),
+                        unselectedTheme: _iconTheme(
+                          unselectedIconTheme,
+                          itemStyle?.foregroundColor,
+                        ),
+                      ),
+                    ),
+                    PositionedDirectional(
+                      start:
+                          MaterialWideNavigationRailButton
+                              ._expandedContentInset +
+                          MaterialWideNavigationRailButton._iconSize +
+                          MaterialWideNavigationRailButton
+                              ._expandedIconLabelSpacing,
+                      end: MaterialWideNavigationRailButton
+                          ._expandedContentInset,
+                      top: 0,
+                      bottom: 0,
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Opacity(
+                          key: const ValueKey('material-rail-expanded-label'),
+                          opacity: progress,
+                          child: _MaterialWideNavigationRailLabel(
+                            destination: destination,
+                            selected: selected,
+                            expanded: true,
+                            itemStyle: itemStyle,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            PositionedDirectional(
-              start:
-                  MaterialWideNavigationRailButton._expandedContentInset +
-                  MaterialWideNavigationRailButton._iconSize +
-                  MaterialWideNavigationRailButton._expandedIconLabelSpacing,
-              end: MaterialWideNavigationRailButton._expandedContentInset,
-              top: 0,
-              bottom: 0,
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Opacity(
-                  key: const ValueKey('material-rail-expanded-label'),
-                  opacity: progress,
-                  child: _MaterialWideNavigationRailLabel(
-                    destination: destination,
-                    selected: selected,
-                    expanded: true,
-                    itemStyle: itemStyle,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

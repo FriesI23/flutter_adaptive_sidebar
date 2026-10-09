@@ -41,6 +41,9 @@ flutter pub add flutter_adaptive_sidebar
 `CupertinoSidebarNavigation`；两者都支持固定在底部的导航项。它们对应的行组件
 分别是 `MaterialWideNavigationRailButton` 和 `CupertinoSidebarDestination`。
 
+Material Rail 选中后仍显示悬停、焦点和按下反馈。反馈颜色遵循
+`NavigationBarThemeData.overlayColor`，默认使用 Material 主题的状态颜色。
+
 ```dart
 final Widget page = AnimatedBuilder(
   animation: controller,
@@ -100,6 +103,8 @@ Edge、Liquid 及折叠栏中的导航项强调色都会跟随
 cd example
 fvm flutter run
 ```
+
+Apple 平台示例最低支持 iOS 15 和 macOS 12，可使用 Xcode 27 构建。
 
 示例应用包含默认及多种主题色切换、响应式布局、Material 与 Cupertino 样式、
 自定义导航内容、折叠栏和窗口控件避让。

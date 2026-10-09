@@ -43,6 +43,10 @@ widget. For a ready-made navigation list, use `MaterialSidebarNavigation` or
 Their row widgets are `MaterialWideNavigationRailButton` and
 `CupertinoSidebarDestination`, respectively.
 
+Material rail destinations keep hover, focus, and press feedback visible when
+selected. Feedback follows `NavigationBarThemeData.overlayColor`, with the
+Material theme state colors as defaults.
+
 ```dart
 final Widget page = AnimatedBuilder(
   animation: controller,
@@ -102,6 +106,9 @@ blur. For per-state destination colors, use `CupertinoSidebarItemStyle`.
 cd example
 fvm flutter run
 ```
+
+The Apple example targets iOS 15 and macOS 12 or later and can be built with
+Xcode 27.
 
 The example covers theme-color switching, responsive layouts, Material and
 Cupertino styles, custom navigation content, collapsed bars, and window-control

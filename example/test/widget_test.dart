@@ -355,7 +355,7 @@ void main() {
     await tester.tap(
       find.descendant(
         of: find.byKey(const ValueKey('material-rail-auxiliary-destination-0')),
-        matching: find.byType(TextButton),
+        matching: find.byType(InkWell),
       ),
     );
     await tester.pumpAndSettle();

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Raise the example deployment targets to iOS 15 and macOS 12 for Xcode 27.
+
+- Keep selected Material rail hover, focus, and press feedback visible and
+  follow NavigationBar theme overlay colors.
+
 ## 0.3.1
 
 - Added Cupertino sidebar toggle builder overrides for the interactive button
