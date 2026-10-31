@@ -118,6 +118,9 @@ center**, reducing its width to fit both the rectangle and the optional hard
 budget. Reserve mandatory page controls in that budget before the first frame.
 The placeholder immediately reserves the accepted cap, independently of earlier
 capsule measurements. Destination content scrolls while its toggle stays pinned.
+Press the selected destination and drag toward an edge to scroll and preview destinations together,
+even while holding the pointer still. Releasing selects and reveals the target;
+cancelling stops the scroll without changing selection.
 
 In the inset style, the panel surface follows the row top. The Edge surface
 remains flush with the window. Panel content starts no earlier than its original

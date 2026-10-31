@@ -977,14 +977,18 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: _ReportSize(
           onSize: _reportCollapsedBarSize,
-          child: IgnorePointer(
-            ignoring: progress < 1,
-            child: ExcludeSemantics(
-              excluding: progress < 1,
-              child: widget.collapsedBarTransitionBuilder(
-                context,
-                progress,
-                capsule,
+          child: CupertinoSidebarInteractionScope(
+            outsideTapGeneration: _outsideTapGeneration,
+            enabled: progress == 1,
+            child: IgnorePointer(
+              ignoring: progress < 1,
+              child: ExcludeSemantics(
+                excluding: progress < 1,
+                child: widget.collapsedBarTransitionBuilder(
+                  context,
+                  progress,
+                  capsule,
+                ),
               ),
             ),
           ),

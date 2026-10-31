@@ -10,7 +10,21 @@ import 'cupertino_floating_surface.dart';
 import 'cupertino_focus.dart';
 import 'cupertino_sidebar.dart';
 import 'cupertino_sidebar_chrome.dart';
+import 'cupertino_sidebar_interaction_scope.dart';
 import 'cupertino_sidebar_item_style.dart';
+
+/// Snapshot of the scrolling bindings used by one thumb gesture.
+typedef _DragScrollEnvironment = ({
+  ScrollableState? scrollable,
+  ScrollPosition? position,
+  TextDirection direction,
+  Size? windowSize,
+});
+
+typedef _CollapsedBarDragLocation = ({
+  _RenderCollapsedSelection row,
+  double localX,
+});
 
 /// Height of the measured collapsed capsule, in logical pixels.
 ///
@@ -60,7 +74,9 @@ const TextStyle _kCollapsedBarLabelStyle = TextStyle(
 ///
 /// Press the selection and drag. The highlight follows the pointer. The
 /// selection changes when the pointer is released, and the highlight snaps to
-/// that destination. [itemStyle] replaces the highlight, the label colors,
+/// that destination. When the bar overflows, holding the thumb near its edge
+/// scrolls the destinations with the drag; the toggle stays pinned. Cancelling
+/// the drag stops scrolling without changing the selection. [itemStyle] replaces the highlight, the label colors,
 /// and the label type.
 ///
 /// ```text
@@ -355,6 +371,9 @@ class _DraggableCollapsedSelectionState
     duration: const Duration(milliseconds: 150),
   );
   late final _ThumbDragRecognizer _drag;
+  late _DragScrollEnvironment _environment;
+  bool _interactionsEnabled = true;
+  _CollapsedBarDragScrollSession? _dragScrollSession;
   double? _dragX;
   double? _snapFrom;
   double? _snapTo;
@@ -374,7 +393,41 @@ class _DraggableCollapsedSelectionState
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final scrollable = Scrollable.maybeOf(context, axis: Axis.horizontal);
+    final environment = (
+      scrollable: scrollable,
+      // Capture the position reference; the same Scrollable can replace it.
+      position: scrollable?.position,
+      direction: Directionality.of(context),
+      windowSize: MediaQuery.maybeSizeOf(context),
+    );
+    final enabled = CupertinoSidebarInteractionScope.isEnabledOf(context);
+    final session = _dragScrollSession;
+    if (session != null && (!enabled || environment != session.environment)) {
+      _onCancel();
+    }
+    _environment = environment;
+    _interactionsEnabled = enabled;
+  }
+
+  @override
+  void didUpdateWidget(_DraggableCollapsedSelection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_dragScrollSession != null &&
+        (widget.selectedIndex != oldWidget.selectedIndex ||
+            widget.children.length != oldWidget.children.length ||
+            widget.height != oldWidget.height)) {
+      _onCancel();
+    }
+  }
+
+  @override
   void dispose() {
+    final session = _dragScrollSession;
+    _dragScrollSession = null;
+    session?.dispose();
     _drag.dispose();
     _snap.dispose();
     super.dispose();
@@ -383,6 +436,22 @@ class _DraggableCollapsedSelectionState
   _RenderCollapsedSelection? get _row {
     return _rowKey.currentContext?.findRenderObject()
         as _RenderCollapsedSelection?;
+  }
+
+  // An invalid viewport cancels the gesture before returning a row snapshot.
+  _CollapsedBarDragLocation? _captureDragLocation() {
+    final session = _dragScrollSession;
+    if (!mounted || session == null) return null;
+    if (!session.isViewportValid) {
+      _onCancel();
+      return null;
+    }
+    final row = _row;
+    final point = session.globalPointer;
+    if (row == null || !row.attached || !row.hasSize || point == null) {
+      return null;
+    }
+    return (row: row, localX: row.globalToLocal(point).dx);
   }
 
   double? get _visualDragX {
@@ -395,40 +464,64 @@ class _DraggableCollapsedSelectionState
 
   void _onPointerDown(PointerDownEvent event) {
     final row = _row;
-    final box = _rowKey.currentContext?.findRenderObject() as RenderBox?;
-    if (row == null || box == null || !row.hasSize) return;
-    if (widget.selectedIndex == null) return;
-    final localX = box.globalToLocal(event.position).dx;
+    if (row == null || !row.hasSize) return;
+    if (_dragScrollSession != null ||
+        widget.selectedIndex == null ||
+        !_interactionsEnabled) {
+      return;
+    }
+    final localX = row.globalToLocal(event.position).dx;
     // Dragging starts on the selected destination, as it does for the segmented
     // thumb. Other destinations keep their tap and can still scroll the bar.
     if (row.indexAt(localX) != widget.selectedIndex) return;
+    late final _CollapsedBarDragScrollSession session;
+    session = _CollapsedBarDragScrollSession(
+      environment: _environment,
+      targetExtent: widget.height,
+      onPositionChanged: () {
+        if (identical(_dragScrollSession, session)) _updateDragPosition();
+      },
+      onInvalidated: () {
+        if (identical(_dragScrollSession, session)) _onCancel();
+      },
+    );
+    _dragScrollSession = session;
     _drag.addPointer(event);
   }
 
   void _onMove(DragUpdateDetails details) {
-    final row = _row;
-    final box = _rowKey.currentContext?.findRenderObject() as RenderBox?;
-    if (row == null || box == null) return;
-    final localX = box.globalToLocal(details.globalPosition).dx;
-    setState(() {
-      _snap.stop();
-      _snapFrom = null;
-      _snapTo = null;
-      _dragX = localX;
-    });
+    final session = _dragScrollSession;
+    if (session == null) return;
+    _snap.stop();
+    _snapFrom = null;
+    _snapTo = null;
+    session.updatePointer(details.globalPosition);
+  }
+
+  void _updateDragPosition() {
+    final location = _captureDragLocation();
+    if (location != null && _dragX != location.localX) {
+      setState(() => _dragX = location.localX);
+    }
   }
 
   void _onEnd(DragEndDetails details) {
-    final row = _row;
-    final dragX = _dragX;
-    if (row == null || dragX == null) {
+    final session = _dragScrollSession;
+    if (session == null || !mounted) return;
+    final location = _captureDragLocation();
+    if (!identical(_dragScrollSession, session)) return;
+    _dragScrollSession = null;
+    if (location == null) {
+      session.finish();
       setState(() => _dragX = null);
       return;
     }
+    final row = location.row;
+    final dragX = location.localX;
     final index = row.indexAt(dragX);
     final target = row.childCenter(index);
-    if (index != widget.selectedIndex) widget.onSelected(index);
     if (target == null) {
+      session.finish();
       setState(() => _dragX = null);
       return;
     }
@@ -444,10 +537,17 @@ class _DraggableCollapsedSelectionState
         _snapTo = null;
       });
     });
+    session.finish(target: row._itemAt(index));
+    // The callback may replace or unmount the bar, so commit last.
+    if (index != widget.selectedIndex) widget.onSelected(index);
   }
 
   void _onCancel() {
+    final session = _dragScrollSession;
+    _dragScrollSession = null;
+    session?.cancel();
     if (!mounted) return;
+    _snap.stop();
     setState(() {
       _dragX = null;
       _snapFrom = null;
@@ -461,6 +561,7 @@ class _DraggableCollapsedSelectionState
     return Listener(
       behavior: HitTestBehavior.translucent,
       onPointerDown: _onPointerDown,
+      onPointerCancel: (_) => _onCancel(),
       child: _CollapsedSelectionRow(
         key: _rowKey,
         selectedIndex: widget.selectedIndex,
@@ -484,6 +585,126 @@ class _DraggableCollapsedSelectionState
         ],
       ),
     );
+  }
+}
+
+/// Coordinates scrolling and cleanup for one captured thumb gesture.
+class _CollapsedBarDragScrollSession {
+  _CollapsedBarDragScrollSession({
+    required this.environment,
+    required this._targetExtent,
+    required this._onPositionChanged,
+    required this._onInvalidated,
+  });
+
+  final _DragScrollEnvironment environment;
+  final double _targetExtent;
+  final VoidCallback _onPositionChanged;
+  final VoidCallback _onInvalidated;
+  EdgeDraggingAutoScroller? _autoScroller;
+  Offset? _globalPointer;
+  Size? _viewportSize;
+  bool _ended = false;
+
+  Offset? get globalPointer => _globalPointer;
+
+  bool get isViewportValid =>
+      !_ended &&
+      (_autoScroller == null ||
+          environment.scrollable?.context.size == _viewportSize);
+
+  void updatePointer(Offset globalPointer) {
+    if (_ended) return;
+    _globalPointer = globalPointer;
+    final scrollable = environment.scrollable;
+    final position = environment.position;
+    if (_autoScroller == null &&
+        scrollable != null &&
+        position != null &&
+        position.hasContentDimensions) {
+      _viewportSize = scrollable.context.size;
+      late final EdgeDraggingAutoScroller autoScroller;
+      autoScroller = EdgeDraggingAutoScroller(
+        scrollable,
+        velocityScalar: 20,
+        onScrollViewScrolled: () {
+          if (!_ended && identical(_autoScroller, autoScroller)) {
+            _updatePosition();
+          }
+        },
+      );
+      _autoScroller = autoScroller;
+      position.addListener(_updatePosition);
+    }
+    _updatePosition();
+  }
+
+  void _updatePosition() {
+    final point = _globalPointer;
+    if (_ended || point == null) return;
+    if (!isViewportValid) {
+      cancel();
+      _onInvalidated();
+      return;
+    }
+    // The owner reprojects this global point after every scroll tick.
+    _onPositionChanged();
+    if (_ended) return;
+    final autoScroller = _autoScroller;
+    final viewportSize = _viewportSize;
+    if (autoScroller == null || viewportSize == null || viewportSize.isEmpty) {
+      return;
+    }
+    // Long labels must not make the target larger than the scroll viewport.
+    autoScroller.startAutoScrollIfNecessary(
+      Rect.fromCenter(
+        center: point,
+        width: math.min(_targetExtent, viewportSize.width),
+        height: math.min(_targetExtent, viewportSize.height),
+      ),
+    );
+  }
+
+  void finish({RenderObject? target}) {
+    if (_ended) return;
+    _stop();
+    final position = environment.position;
+    if (position != null && target != null && target.attached) {
+      position.ensureVisible(
+        target,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  void cancel() => _stop();
+
+  void dispose() {
+    // Its Scrollable also disposes the activity. Jumping here would access
+    // PageStorage through a deactivated ancestor while saving its offset.
+    _stop(stopActivity: false);
+  }
+
+  void _stop({bool stopActivity = true}) {
+    if (_ended) return;
+    _ended = true;
+    final autoScroller = _autoScroller;
+    final wasScrolling = autoScroller?.scrolling ?? false;
+    _autoScroller = null;
+    _globalPointer = null;
+    _viewportSize = null;
+    autoScroller?.stopAutoScroll();
+    final position = environment.position;
+    position?.removeListener(_updatePosition);
+    // stopAutoScroll stops the loop, but an already driven step still moves.
+    if (stopActivity &&
+        wasScrolling &&
+        position != null &&
+        position.hasPixels) {
+      position.jumpTo(position.pixels);
+    }
   }
 }
 
