@@ -1,16 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
-- Auto-scroll overflowing Cupertino collapsed destinations while dragging the
-  selected thumb near an edge, keeping preview and selection in the same viewport.
-  Releasing reveals the selected destination; cancelling stops without selecting.
-
-- Add optional Cupertino toolbar regions for safe fixed capsules and toggles,
-  with a first-frame capsule budget that preserves window centering.
-- Let inset panel surfaces follow a supplied toolbar row while keeping panel
-  content and page safe-area protection independent. Unusable declarations and
-  toolbar anchors retain their existing layout.
+- Add `CupertinoSidebarToolbarRegion` to position toggles and fixed collapsed
+  bars within a declared toolbar region, with a width budget that preserves
+  window centering and independent panel and page safe areas.
+- Auto-scroll overflowing Cupertino collapsed destinations when dragging the
+  selected thumb near an edge. Releasing selects and reveals the target;
+  cancelling leaves selection unchanged.
 
 ## 0.3.2
 

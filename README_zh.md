@@ -94,9 +94,12 @@ Edge、Liquid 及折叠栏中的导航项强调色都会跟随
 `backgroundColor`。两种方式都支持动态颜色，透明颜色仍会保留背景模糊效果。
 如需按交互状态定制导航项颜色，可使用 `CupertinoSidebarItemStyle`。
 
-## Cupertino 工具栏区域
+## Cupertino 工具栏与折叠栏
 
-应用能独立声明顶部安全操作行时，可传入 `CupertinoSidebar.toolbarRegion`：
+折叠栏中的导航项超出可见范围时，按住选中项拖向边缘，即可自动滚动并预览其他导航项，
+切换按钮保持固定。松手后选择并显示目标项，取消则保留原选中项。
+
+应用可通过 `CupertinoSidebar.toolbarRegion` 指定工具栏控件的可用区域：
 
 ```dart
 toolbarRegion: CupertinoSidebarToolbarRegion(
@@ -106,22 +109,14 @@ toolbarRegion: CupertinoSidebarToolbarRegion(
 ),
 ```
 
-矩形使用相对于 Sidebar 布局框的物理逻辑像素，不随 RTL 镜像，也不跟随页面路由的绘制变换。
-`toolbarGeometry` 继续控制实际操作行和胶囊高度。Toggle 和固定胶囊在该区域内布局；
-胶囊保持**窗口居中**，根据区域和可选的宽度上限收窄。应用需在首帧预算中先保留页面
-必需的操作按钮。占位立即使用最终接受的宽度上限，不依赖上一帧胶囊测量；导航项可滚动，
-胶囊内的 toggle 保持固定。按住选中项拖向边缘时，列表随拖动预览一起自动滚动，
-停住指针也可继续滚动；松手后选择并显示目标项，取消则停止滚动且不改变选中项。
+`bounds` 使用相对于侧边栏的逻辑像素坐标，不随 RTL 镜像；`minimumExtent` 指定面板
+内容的最小顶部保护距离，至少覆盖操作行底部。`maxCollapsedBarWidth` 限制折叠栏宽度，
+同时保持窗口居中，应用需在首帧布局前为页面操作按钮预留空间。
 
-Inset 样式的面板表面跟随操作行顶部，Edge 表面继续贴窗。面板内容起点不早于原有
-Safe Area 保护与 `minimumExtent` 的较大值，并保留导航列表既有间距。页面 MediaQuery
-的顶部 padding 和 viewPadding 保持原值，页面 AppBar 仍负责自己的内容保护。
-
-该接口支持 `fixedToolbar` 和独立 toggle。未传入、非有限值、超出布局框、操作区／胶囊
-空间不足或使用 `toolbarAnchor` 时，整组恢复原布局。完整展开的面板与操作行的交集也
-必须容纳 44 像素 toggle，即使面板当前隐藏；这一判断不随展开动画进度变化。
-`SidebarLeadingScope.toolbarRegion` 提供最终接受的区域及有效胶囊宽度上限，拒绝时为
-null，方便页面 renderer 同步布局。本包不识别设备型号，也不测量系统遮挡。
+该区域支持 `fixedToolbar` 和独立切换按钮，不支持或不可用时沿用默认布局。
+高度由 `toolbarGeometry` 控制；Inset 面板表面跟随操作行顶部，Edge 表面继续贴窗。
+面板原有的安全区域保护和页面安全区域均保留。页面工具栏可通过
+`SidebarLeadingScope.toolbarRegion` 获取最终接受的区域。
 
 ## 更多示例
 
