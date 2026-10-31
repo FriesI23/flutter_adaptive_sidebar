@@ -20,6 +20,7 @@ class CupertinoSidebarPanel extends StatelessWidget {
     required this.onResizeUpdate,
     required this.onResizeEnd,
     this.chrome = CupertinoSidebarChrome.liquid,
+    this.contentTopInset = 0,
   });
 
   static const double _resizeHandleWidth = 16;
@@ -53,6 +54,9 @@ class CupertinoSidebarPanel extends StatelessWidget {
 
   /// Edge treatment for the glass.
   final CupertinoSidebarChrome chrome;
+
+  /// Additional space above panel content, independent of the glass surface.
+  final double contentTopInset;
 
   @override
   Widget build(BuildContext context) {
@@ -117,6 +121,12 @@ class CupertinoSidebarPanel extends StatelessWidget {
   /// Keeps destinations clear of the status bar, home indicator, and leading
   /// safe area while the glass itself stays flush with the window.
   Widget _insetContent(BuildContext context, Widget content) {
+    if (contentTopInset > 0) {
+      content = Padding(
+        padding: EdgeInsets.only(top: contentTopInset),
+        child: content,
+      );
+    }
     if (!chrome.flushToWindowEdge) return content;
     final padding = MediaQuery.paddingOf(context);
     final direction = Directionality.of(context);

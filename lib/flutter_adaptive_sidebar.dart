@@ -3,7 +3,10 @@ library;
 
 export 'src/adaptive_navigation_controller.dart';
 export 'src/adaptive_navigation_destination.dart';
-export 'src/cupertino/cupertino_sidebar.dart';
+export 'src/cupertino/cupertino_sidebar.dart'
+    hide
+        CupertinoSidebarCollapsedBarLayout,
+        CupertinoSidebarToolbarRegionResolver;
 export 'src/cupertino/cupertino_sidebar_button.dart'
     show CupertinoSidebarToggleBuilder, CupertinoSidebarToggleDefaultBuilder;
 export 'src/cupertino/cupertino_sidebar_chrome.dart'
@@ -18,6 +21,7 @@ export 'src/cupertino/cupertino_sidebar_item_style.dart';
 export 'src/cupertino/cupertino_sidebar_navigation.dart';
 export 'src/cupertino/cupertino_sidebar_theme_data.dart';
 export 'src/cupertino/cupertino_sidebar_toolbar_geometry.dart';
+export 'src/cupertino/cupertino_sidebar_toolbar_region.dart';
 export 'src/material/material_sidebar.dart';
 export 'src/material/material_sidebar_item_style.dart';
 export 'src/material/material_sidebar_metrics.dart';

@@ -97,6 +97,44 @@ to tint Edge surfaces throughout an app, or pass `backgroundColor` to customize
 one sidebar. Both accept dynamic colors, and transparent colors retain backdrop
 blur. For per-state destination colors, use `CupertinoSidebarItemStyle`.
 
+## Cupertino toolbar regions
+
+Use `CupertinoSidebar.toolbarRegion` when your app can declare a safe toolbar
+row independently of the panel and page safe areas:
+
+```dart
+toolbarRegion: CupertinoSidebarToolbarRegion(
+  bounds: availableToolbarBounds,
+  minimumExtent: protectedContentTop,
+  maxCollapsedBarWidth: capsuleWidthBudget,
+),
+```
+
+The rectangle uses physical logical pixels relative to the sidebar's layout
+box. It is not mirrored in RTL or transformed with a page route. Existing
+`toolbarGeometry` still controls the actual row and capsule heights. The toggle
+and fixed capsule fit inside this region; the capsule keeps the **window
+center**, reducing its width to fit both the rectangle and the optional hard
+budget. Reserve mandatory page controls in that budget before the first frame.
+The placeholder immediately reserves the accepted cap, independently of earlier
+capsule measurements. Destination content scrolls while its toggle stays pinned.
+
+In the inset style, the panel surface follows the row top. The Edge surface
+remains flush with the window. Panel content starts no earlier than its original
+safe-area protection or `minimumExtent`, whichever is greater, and keeps its
+existing navigation-list spacing. The page's MediaQuery top and view padding
+retain their original values; page app bars remain responsible for their own
+content protection.
+
+The override supports `fixedToolbar` placement and standalone toggles. Null,
+nonfinite or out-of-box declarations, insufficient control/capsule space, and
+`toolbarAnchor` placement retain the complete original layout. The fully
+expanded panel must also fit a 44-pixel toggle in its intersection with the row,
+even while hidden. This decision does not change during expansion animations.
+`SidebarLeadingScope.toolbarRegion` exposes the accepted region, including the
+effective capsule cap, or null after rejection so page renderers can coordinate
+their own layout. The package does not identify devices or measure obstructions.
+
 ## More examples
 
 <details>

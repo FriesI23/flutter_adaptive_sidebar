@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart' show kMinInteractiveDimensionCupertino;
 import 'package:flutter/widgets.dart';
 
+import 'cupertino/cupertino_sidebar_toolbar_region.dart';
+
 /// Sidebar toggle geometry exposed to page app bars inside the body.
 ///
 /// The sidebar owns the toggle button. Pages read this scope to reserve
@@ -11,6 +13,7 @@ class SidebarLeadingScope extends InheritedWidget {
     super.key,
     required this.toolbarAvoidance,
     required this.progress,
+    this.toolbarRegion,
     required super.child,
   });
 
@@ -26,6 +29,9 @@ class SidebarLeadingScope extends InheritedWidget {
   /// One means the sidebar is hidden and the page reserves the toggle.
   final double progress;
 
+  /// Accepted toolbar region, or null when the sidebar retained its layout.
+  final CupertinoSidebarToolbarRegion? toolbarRegion;
+
   /// Width reserved before the page-owned leading content.
   double get reservedExtent => buttonExtent * progress;
 
@@ -36,5 +42,6 @@ class SidebarLeadingScope extends InheritedWidget {
   @override
   bool updateShouldNotify(SidebarLeadingScope oldWidget) =>
       toolbarAvoidance != oldWidget.toolbarAvoidance ||
-      progress != oldWidget.progress;
+      progress != oldWidget.progress ||
+      toolbarRegion != oldWidget.toolbarRegion;
 }

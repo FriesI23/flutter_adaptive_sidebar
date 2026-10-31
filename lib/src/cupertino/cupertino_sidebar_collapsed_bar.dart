@@ -19,6 +19,9 @@ import 'cupertino_sidebar_item_style.dart';
 const double kCupertinoSidebarCollapsedBarMeasuredHeight = 44;
 
 const double _kCollapsedBarSelectionHeight = 36;
+const double _capsuleHorizontalPadding = 4;
+const double _capsuleSeparatorPadding = 4;
+const double _capsuleSeparatorWidth = 1;
 
 const double _kCollapsedBarEdgeFillAlpha = 0.45;
 
@@ -739,6 +742,19 @@ class CupertinoSidebarCollapsedCapsule extends StatelessWidget {
     this.showSeparator = false,
   });
 
+  /// Width needed to retain the leading control and one body viewport.
+  static double minimumWidth({
+    required double leadingExtent,
+    required double minimumBodyExtent,
+    required bool showSeparator,
+  }) =>
+      2 * _capsuleHorizontalPadding +
+      leadingExtent +
+      minimumBodyExtent +
+      (showSeparator
+          ? 2 * _capsuleSeparatorPadding + _capsuleSeparatorWidth
+          : 0);
+
   /// Control pinned at the start, usually the sidebar toggle.
   final Widget leading;
 
@@ -794,7 +810,9 @@ class CupertinoSidebarCollapsedCapsule extends StatelessWidget {
       child: SizedBox(
         height: height,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(
+            horizontal: _capsuleHorizontalPadding,
+          ),
           child: _PinnedCapsuleRow(
             minimumBodyExtent: minimumBodyExtent,
             leading: leading,
@@ -824,9 +842,9 @@ class _CapsuleSeparator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       key: const ValueKey('cupertino-sidebar-collapsed-separator'),
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: _capsuleSeparatorPadding),
       child: SizedBox(
-        width: 1,
+        width: _capsuleSeparatorWidth,
         height: 20,
         child: ColoredBox(
           color: CupertinoDynamicColor.resolve(

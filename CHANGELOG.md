@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add optional Cupertino toolbar regions for safe fixed capsules and toggles,
+  with a first-frame capsule budget that preserves window centering.
+- Let inset panel surfaces follow a supplied toolbar row while keeping panel
+  content and page safe-area protection independent. Unusable declarations and
+  toolbar anchors retain their existing layout.
+
 ## 0.3.2
 
 - Raise the example deployment targets to iOS 15 and macOS 12 for Xcode 27.

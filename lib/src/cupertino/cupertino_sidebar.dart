@@ -18,6 +18,31 @@ import 'cupertino_sidebar_interaction_scope.dart';
 import 'cupertino_sidebar_panel.dart';
 import 'cupertino_sidebar_theme_data.dart';
 import 'cupertino_sidebar_toolbar_geometry.dart';
+import 'cupertino_sidebar_toolbar_region.dart';
+
+/// Geometry and placement requirements of an optional collapsed bar.
+typedef CupertinoSidebarCollapsedBarLayout = ({
+  double height,
+  double minimumWidth,
+  bool fixedPlacement,
+});
+
+/// Resolves an accepted toolbar region from host and control geometry.
+///
+/// This internal interface has no widget, platform or animation dependencies.
+abstract interface class CupertinoSidebarToolbarRegionResolver {
+  const factory CupertinoSidebarToolbarRegionResolver({
+    required CupertinoSidebarToolbarRegion? region,
+    required Size size,
+    required Rect expandedPanelBounds,
+    required double buttonExtent,
+    required double toolbarHeight,
+    CupertinoSidebarCollapsedBarLayout? collapsedBar,
+  }) = _CupertinoSidebarToolbarRegionResolver;
+
+  /// Returns the accepted region, or null when the host cannot use it.
+  CupertinoSidebarToolbarRegion? resolve();
+}
 
 /// Opacity of the collapsed bar's glass fill.
 ///
@@ -120,6 +145,7 @@ class CupertinoSidebar extends StatefulWidget {
     this.collapsedBarPlacement =
         CupertinoSidebarCollapsedBarPlacement.toolbarAnchor,
     this.toolbarGeometry = CupertinoSidebarToolbarGeometry.standard,
+    this.toolbarRegion,
     double? collapsedBarHeight,
     this.collapsedBarMinimumDestinationExtent =
         kCupertinoSidebarCollapsedBarMeasuredWidth,
@@ -155,6 +181,7 @@ class CupertinoSidebar extends StatefulWidget {
         CupertinoSidebarCollapsedBarPlacement.toolbarAnchor,
     CupertinoSidebarToolbarGeometry toolbarGeometry =
         CupertinoSidebarToolbarGeometry.standard,
+    CupertinoSidebarToolbarRegion? toolbarRegion,
     double? collapsedBarHeight,
     double collapsedBarMinimumDestinationExtent =
         kCupertinoSidebarCollapsedBarMeasuredWidth,
@@ -179,6 +206,7 @@ class CupertinoSidebar extends StatefulWidget {
          collapsedBarController: collapsedBarController,
          collapsedBarPlacement: collapsedBarPlacement,
          toolbarGeometry: toolbarGeometry,
+         toolbarRegion: toolbarRegion,
          collapsedBarHeight: collapsedBarHeight,
          collapsedBarMinimumDestinationExtent:
              collapsedBarMinimumDestinationExtent,
@@ -239,6 +267,16 @@ class CupertinoSidebar extends StatefulWidget {
   /// Use [CupertinoSidebarToolbarGeometry.standard] for the measured iPad
   /// layout and [CupertinoSidebarToolbarGeometry.compact] for desktop.
   final CupertinoSidebarToolbarGeometry toolbarGeometry;
+
+  /// Optional layout space for fixed toolbar controls and the panel toggle.
+  ///
+  /// A valid region replaces the controls' ordinary safe-area position. The
+  /// inset panel surface follows its top; the edge surface remains flush.
+  /// Panel content and the page retain their independent safe-area protection.
+  /// Unsupported or unusable regions are ignored as a whole. With a collapsed
+  /// bar, only [CupertinoSidebarCollapsedBarPlacement.fixedToolbar] supports
+  /// this override; toolbar anchors keep their page-owned placement.
+  final CupertinoSidebarToolbarRegion? toolbarRegion;
 
   /// Height of [collapsedBar], and of the toggle inside it.
   ///
@@ -510,7 +548,9 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => LayoutBuilder(builder: _buildSidebar);
+
+  Widget _buildSidebar(BuildContext context, BoxConstraints constraints) {
     final expandNavigationLabel =
         widget.expandLabel ??
         Localizations.of<MaterialLocalizations>(
@@ -544,7 +584,7 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
         : math.max(chrome.surfaceMargin, leadingMediaPadding);
     // The traffic-light row is the ordinary toolbar, not the extra vertical
     // corner avoidance. Horizontal avoidance still shifts the button aside.
-    final buttonTop = math.max(
+    final ordinaryButtonTop = math.max(
       math.max(chrome.surfaceMargin, widget.toolbarGeometry.topInset),
       mediaPadding.top,
     );
@@ -554,15 +594,61 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
     final sideNavigationEnd = direction == TextDirection.ltr
         ? obstruction.sidebar.right
         : obstruction.sidebar.left;
-    final visibleButtonStart =
+    final ordinaryVisibleButtonStart =
         panelOrigin +
         panelWidth -
         math.max(sideNavigationEnd, _panelToggleTrailingPadding) -
         SidebarLeadingScope.buttonExtent;
-    final hiddenButtonStart = sideNavigationStart + _appBarLeadingPadding;
+    final ordinaryHiddenButtonStart =
+        sideNavigationStart + _appBarLeadingPadding;
+    final toolbarRegion = _resolveToolbarRegion(
+      size: constraints.biggest,
+      panelWidth: panelWidth,
+      panelOrigin: panelOrigin,
+      direction: direction,
+    );
+    final buttonTop = toolbarRegion == null
+        ? ordinaryButtonTop
+        : toolbarRegion.bounds.center.dy - SidebarLeadingScope.buttonExtent / 2;
+    final visibleButtonStart = toolbarRegion == null
+        ? ordinaryVisibleButtonStart
+        : _clampButtonStart(
+            ordinaryVisibleButtonStart,
+            _panelBounds(
+              constraints.maxWidth,
+              panelWidth,
+              panelOrigin,
+              direction,
+            ).intersect(toolbarRegion.bounds),
+            constraints.maxWidth,
+            direction,
+          );
+    final hiddenButtonStart = toolbarRegion == null
+        ? ordinaryHiddenButtonStart
+        : _clampButtonStart(
+            (direction == TextDirection.ltr
+                    ? toolbarRegion.bounds.left
+                    : constraints.maxWidth - toolbarRegion.bounds.right) +
+                _appBarLeadingPadding,
+            toolbarRegion.bounds,
+            constraints.maxWidth,
+            direction,
+          );
+    final panelContentTopInset = toolbarRegion == null
+        ? 0.0
+        : chrome.flushToWindowEdge
+        ? math.max(0.0, toolbarRegion.minimumExtent - mediaPadding.top)
+        : math.max(
+            0.0,
+            math.max(
+                  math.max(chrome.surfaceMargin, mediaPadding.top),
+                  toolbarRegion.minimumExtent,
+                ) -
+                toolbarRegion.bounds.top,
+          );
     final branchMediaQuery = MediaQuery.of(
       context,
-    ).copyWith(padding: mediaPadding.copyWith(top: buttonTop));
+    ).copyWith(padding: mediaPadding.copyWith(top: ordinaryButtonTop));
     final branchMediaQueryWithoutLeadingPadding = branchMediaQuery
         .removePadding(
           removeLeft: direction == TextDirection.ltr,
@@ -677,13 +763,19 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
             showBar: capsule != null,
             barLink: _collapsedBarLink,
             placement: widget.collapsedBarPlacement,
-            barSize: _collapsedBarSize,
+            barSize: toolbarRegion == null || capsule == null
+                ? _collapsedBarSize
+                : Size(
+                    toolbarRegion.maxCollapsedBarWidth!,
+                    widget.collapsedBarHeight,
+                  ),
             slotWidth: _collapsedBarSlotWidth,
             collapseProgress: collapsedBarProgress,
             reportSlotWidth: _reportCollapsedBarSlotWidth,
             barHeight: widget.collapsedBarHeight,
             child: SidebarLeadingScope(
               toolbarAvoidance: toolbarAvoidance,
+              toolbarRegion: toolbarRegion,
               progress: collapsedBarEnabled ? 0 : appBarProgress,
               child: MediaQuery(
                 data: effectiveBranchMediaQuery,
@@ -712,14 +804,25 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
                 CupertinoSidebarCollapsedBarPlacement.fixedToolbar =>
                   Positioned(
                     key: const ValueKey('cupertino-sidebar-fixed-toolbar-host'),
-                    left: 0,
-                    right: 0,
-                    top: buttonTop,
+                    left: toolbarRegion == null
+                        ? 0
+                        : (constraints.maxWidth -
+                                  toolbarRegion.maxCollapsedBarWidth!) /
+                              2,
+                    right: toolbarRegion == null ? 0 : null,
+                    width: toolbarRegion?.maxCollapsedBarWidth,
+                    top: toolbarRegion == null
+                        ? buttonTop
+                        : toolbarRegion.bounds.center.dy -
+                              widget.toolbarGeometry.contentHeight / 2,
                     height: widget.toolbarGeometry.contentHeight,
                     child: Center(
                       child: _buildCollapsedBarHost(
                         capsule,
                         collapsedBarProgress,
+                        maxWidth:
+                            toolbarRegion?.maxCollapsedBarWidth ??
+                            double.infinity,
                       ),
                     ),
                   ),
@@ -737,11 +840,13 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
                 child: _CupertinoSidebarAnimatedPanel(
                   progress: expandedProgress,
                   chrome: chrome,
+                  toolbarRegion: toolbarRegion,
                   child: CupertinoSidebarPanel(
                     chrome: chrome,
                     width: panelWidth,
                     backgroundColor: sidebarBackground,
                     contentActive: expandedProgress == 1,
+                    contentTopInset: panelContentTopInset,
                     content: CupertinoSidebarInteractionScope(
                       outsideTapGeneration: _outsideTapGeneration,
                       child: CupertinoSidebarStyleScope(
@@ -800,6 +905,65 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
         );
       },
     );
+  }
+
+  CupertinoSidebarToolbarRegion? _resolveToolbarRegion({
+    required Size size,
+    required double panelWidth,
+    required double panelOrigin,
+    required TextDirection direction,
+  }) => CupertinoSidebarToolbarRegionResolver(
+    region: widget.toolbarRegion,
+    size: size,
+    expandedPanelBounds: _panelBounds(
+      size.width,
+      panelWidth,
+      panelOrigin,
+      direction,
+    ),
+    buttonExtent: SidebarLeadingScope.buttonExtent,
+    toolbarHeight: widget.toolbarGeometry.contentHeight,
+    collapsedBar: widget.collapsedBar == null
+        ? null
+        : (
+            height: widget.collapsedBarHeight,
+            minimumWidth: CupertinoSidebarCollapsedCapsule.minimumWidth(
+              leadingExtent: widget.collapsedBarHeight,
+              minimumBodyExtent: widget.collapsedBarMinimumDestinationExtent,
+              showSeparator: widget.collapsedBarSeparator,
+            ),
+            fixedPlacement:
+                widget.collapsedBarPlacement ==
+                CupertinoSidebarCollapsedBarPlacement.fixedToolbar,
+          ),
+  ).resolve();
+
+  Rect _panelBounds(
+    double width,
+    double panelWidth,
+    double panelOrigin,
+    TextDirection direction,
+  ) => Rect.fromLTWH(
+    direction == TextDirection.ltr
+        ? panelOrigin
+        : width - panelOrigin - panelWidth,
+    0,
+    panelWidth,
+    double.infinity,
+  );
+
+  double _clampButtonStart(
+    double preferred,
+    Rect available,
+    double width,
+    TextDirection direction,
+  ) {
+    const extent = SidebarLeadingScope.buttonExtent;
+    final physical = direction == TextDirection.ltr
+        ? preferred
+        : width - preferred - extent;
+    final clamped = physical.clamp(available.left, available.right - extent);
+    return direction == TextDirection.ltr ? clamped : width - clamped - extent;
   }
 
   Widget _buildCollapsedBarHost(
@@ -934,10 +1098,12 @@ class _CupertinoSidebarAnimatedPanel extends StatelessWidget {
     required this.progress,
     required this.chrome,
     required this.child,
+    this.toolbarRegion,
   });
 
   final double progress;
   final CupertinoSidebarChrome chrome;
+  final CupertinoSidebarToolbarRegion? toolbarRegion;
   final Widget child;
 
   @override
@@ -955,6 +1121,26 @@ class _CupertinoSidebarAnimatedPanel extends StatelessWidget {
       ),
     );
     if (chrome.flushToWindowEdge) return sliding;
+    final region = toolbarRegion;
+    if (region != null) {
+      final padding = MediaQuery.paddingOf(context);
+      return Padding(
+        padding: EdgeInsets.fromLTRB(
+          math.max(chrome.surfaceMargin, padding.left),
+          region.bounds.top,
+          math.max(chrome.surfaceMargin, padding.right),
+          math.max(chrome.surfaceMargin, padding.bottom),
+        ),
+        child: MediaQuery.removePadding(
+          context: context,
+          removeLeft: true,
+          removeTop: true,
+          removeRight: true,
+          removeBottom: true,
+          child: sliding,
+        ),
+      );
+    }
     return SafeArea(
       minimum: EdgeInsets.all(chrome.surfaceMargin),
       child: sliding,
@@ -1191,5 +1377,85 @@ class _RenderReportSize extends RenderProxyBox {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (attached && _reported == next) onSize(next);
     });
+  }
+}
+
+final class _CupertinoSidebarToolbarRegionResolver
+    implements CupertinoSidebarToolbarRegionResolver {
+  const _CupertinoSidebarToolbarRegionResolver({
+    required this.region,
+    required this.size,
+    required this.expandedPanelBounds,
+    required this.buttonExtent,
+    required this.toolbarHeight,
+    this.collapsedBar,
+  });
+
+  final CupertinoSidebarToolbarRegion? region;
+  final Size size;
+  final Rect expandedPanelBounds;
+  final double buttonExtent;
+  final double toolbarHeight;
+  final CupertinoSidebarCollapsedBarLayout? collapsedBar;
+
+  @override
+  CupertinoSidebarToolbarRegion? resolve() {
+    final region = this.region;
+    if (region == null || !_hasUsableRegion(region)) return null;
+    // Always check the fully expanded panel, independently of visibility.
+    final panelRow = expandedPanelBounds.intersect(region.bounds);
+    if (panelRow.width < buttonExtent) return null;
+    final collapsedBar = this.collapsedBar;
+    if (collapsedBar == null) return region;
+    final collapsedWidth = _calculateCollapsedWidth(region);
+    if (collapsedWidth < collapsedBar.minimumWidth) return null;
+    return CupertinoSidebarToolbarRegion(
+      bounds: region.bounds,
+      minimumExtent: region.minimumExtent,
+      maxCollapsedBarWidth: collapsedWidth,
+    );
+  }
+
+  bool _hasUsableRegion(CupertinoSidebarToolbarRegion region) {
+    final bounds = region.bounds;
+    final maxWidth = region.maxCollapsedBarWidth;
+    final collapsedBar = this.collapsedBar;
+    final invalidHost =
+        !size.isFinite ||
+        !bounds.isFinite ||
+        bounds.isEmpty ||
+        bounds.left < 0 ||
+        bounds.top < 0 ||
+        bounds.right > size.width ||
+        bounds.bottom > size.height;
+    final invalidProtection =
+        !region.minimumExtent.isFinite ||
+        region.minimumExtent < bounds.bottom ||
+        region.minimumExtent > size.height;
+    final invalidWidth =
+        maxWidth != null && (!maxWidth.isFinite || maxWidth <= 0);
+    final insufficientControlSpace =
+        bounds.width < buttonExtent ||
+        bounds.height < buttonExtent ||
+        bounds.height < toolbarHeight;
+    final unsupportedBar =
+        collapsedBar != null &&
+        (!collapsedBar.fixedPlacement || bounds.height < collapsedBar.height);
+    return !(invalidHost ||
+        invalidProtection ||
+        invalidWidth ||
+        insufficientControlSpace ||
+        unsupportedBar);
+  }
+
+  double _calculateCollapsedWidth(CupertinoSidebarToolbarRegion region) {
+    final bounds = region.bounds;
+    final center = size.width / 2;
+    final centeredWidth =
+        2.0 * math.min(center - bounds.left, bounds.right - center);
+    return math.min(
+      centeredWidth,
+      region.maxCollapsedBarWidth ?? double.infinity,
+    );
   }
 }
