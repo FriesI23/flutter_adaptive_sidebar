@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_adaptive_sidebar/src/material/material_rail_destination_group_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   testWidgets('child sits below the largest gap that fits', (tester) async {

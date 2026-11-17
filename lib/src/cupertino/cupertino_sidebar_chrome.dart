@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 
 /// Opacity of [CupertinoSidebarChrome.liquid]'s glass fill.
 const double kCupertinoSidebarLiquidFillAlpha = 0.7;

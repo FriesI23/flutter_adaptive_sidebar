@@ -1,10 +1,10 @@
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
 import 'package:flutter_adaptive_sidebar_example/main.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   testWidgets('Cupertino example uses the 54pt sidebar navigation row', (
@@ -68,9 +68,9 @@ void main() {
       CupertinoColors.systemPurple.withValues(alpha: 0.14),
     );
     final surface = find.byKey(const ValueKey('cupertino-sidebar-surface'));
-    final edgeSource = Theme.of(
-      tester.element(surface),
-    ).extension<CupertinoSidebarThemeData>()!.edgeBackgroundColor!;
+    final edgeSource = Theme.of(tester.element(surface))
+        .extension<CupertinoSidebarThemeData>()!
+        .edgeBackgroundColor!;
     final surfaceColor = tester.widget<ColoredBox>(
       find.descendant(of: surface, matching: find.byType(ColoredBox)).first,
     );
@@ -258,9 +258,8 @@ void main() {
       find.byKey(const ValueKey('cupertino-sidebar-backdrop')),
     );
     expect(
-      CupertinoTheme.of(
-        tester.element(find.widgetWithText(Center, 'Search')),
-      ).scaffoldBackgroundColor,
+      CupertinoTheme.of(tester.element(find.widgetWithText(Center, 'Search')))
+          .scaffoldBackgroundColor,
       backdrop.color,
     );
     await tester.tap(
@@ -472,9 +471,9 @@ void main() {
       const ValueKey('cupertino-sidebar-destination-0'),
     );
     final destinationContext = tester.element(destination);
-    final builder = Theme.of(
-      destinationContext,
-    ).extension<CupertinoSidebarThemeData>()!.focusHaloBuilder;
+    final builder = Theme.of(destinationContext)
+        .extension<CupertinoSidebarThemeData>()!
+        .focusHaloBuilder;
     expect(builder, isNotNull);
     final halo = builder!(
       destinationContext,
@@ -589,9 +588,8 @@ void main() {
     );
     expect(find.widgetWithText(Center, 'Note'), findsOneWidget);
     expect(find.text('Groceries'), findsOneWidget);
-    final listsStyle = DefaultTextStyle.of(
-      tester.element(find.text('Lists')),
-    ).style;
+    final listsStyle = DefaultTextStyle.of(tester.element(find.text('Lists')))
+        .style;
     expect(listsStyle.decoration, TextDecoration.none);
     expect(listsStyle.fontFamily, 'CupertinoSystemText');
     expect(listsStyle.color, isNot(const Color(0xD0FF0000)));
@@ -698,9 +696,8 @@ void main() {
 
     expect(barBlur().enabled, isTrue);
     final navigationBar = tester.widget<CupertinoNavigationBar>(bar);
-    final scaffoldColor = CupertinoTheme.of(
-      tester.element(bar),
-    ).scaffoldBackgroundColor;
+    final scaffoldColor = CupertinoTheme.of(tester.element(bar))
+        .scaffoldBackgroundColor;
     final backgroundColor = navigationBar.backgroundColor!;
     expect(backgroundColor.r, scaffoldColor.r);
     expect(backgroundColor.g, scaffoldColor.g);
@@ -829,9 +826,8 @@ void main() {
     final demoDescription = find.byKey(
       const ValueKey('collapsed-bar-placement-demo-description'),
     );
-    final demoTextStyle = DefaultTextStyle.of(
-      tester.element(demoDescription),
-    ).style;
+    final demoTextStyle = DefaultTextStyle.of(tester.element(demoDescription))
+        .style;
     expect(demoTextStyle.decoration, TextDecoration.none);
     expect(demoTextStyle.fontFamily, 'CupertinoSystemText');
 

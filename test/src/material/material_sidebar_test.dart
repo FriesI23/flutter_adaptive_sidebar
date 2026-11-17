@@ -1,11 +1,38 @@
-import 'package:flutter/material.dart';
+// Deliberate legacy host to verify the migration diagnostic.
+import 'package:flutter/material.dart' as legacy;
 import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../harness/sidebar_harness.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('legacy MaterialApp explains how to migrate the host', (
+    tester,
+  ) async {
+    final controller = AdaptiveNavigationController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      legacy.MaterialApp(
+        home: MaterialSidebar(
+          controller: controller,
+          content: const SizedBox.shrink(),
+        ),
+      ),
+    );
+
+    final error = tester.takeException();
+    expect(error, isA<FlutterError>());
+    expect(
+      error.toString(),
+      contains('MaterialSidebar requires material_ui localizations.'),
+    );
+    expect(error.toString(), contains('package:material_ui/material_ui.dart'));
+    expect(error.toString(), contains('package:flutter/material.dart'));
+  });
 
   testWidgets('toggle collapses the rail to its collapsed extent', (
     tester,

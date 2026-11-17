@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart' show MaterialLocalizations;
 import 'package:flutter/rendering.dart';
+import 'package:material_ui/material_ui.dart' show MaterialLocalizations;
 
 import '../adaptive_navigation_controller.dart';
 import '../navigation_obstruction.dart';
@@ -646,9 +646,8 @@ class _CupertinoSidebarState extends State<CupertinoSidebar>
                 ) -
                 toolbarRegion.bounds.top,
           );
-    final branchMediaQuery = MediaQuery.of(
-      context,
-    ).copyWith(padding: mediaPadding.copyWith(top: ordinaryButtonTop));
+    final branchMediaQuery = MediaQuery.of(context)
+        .copyWith(padding: mediaPadding.copyWith(top: ordinaryButtonTop));
     final branchMediaQueryWithoutLeadingPadding = branchMediaQuery
         .removePadding(
           removeLeft: direction == TextDirection.ltr,
@@ -1155,8 +1154,11 @@ class _CupertinoSidebarAnimatedPanel extends StatelessWidget {
 /// Positions a collapsed Cupertino bar while the sidebar hides or shows.
 ///
 /// [progress] is 0 when the bar is hidden and 1 when it is fully shown.
-typedef CupertinoSidebarCollapsedBarTransitionBuilder =
-    Widget Function(BuildContext context, double progress, Widget child);
+typedef CupertinoSidebarCollapsedBarTransitionBuilder = Widget Function(
+  BuildContext context,
+  double progress,
+  Widget child,
+);
 
 /// Built-in transitions for [CupertinoSidebar.collapsedBarTransitionBuilder].
 ///

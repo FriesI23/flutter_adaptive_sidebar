@@ -29,6 +29,13 @@ content on its own.
 | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Material sidebar expanding and collapsing](screenshots/material-sidebar.webp) | **Standard**<br>![Cupertino sidebar expanding and collapsing](screenshots/cupertino-sidebar.webp)<br><br><details><summary><strong>Edge · light</strong></summary><br><img src="screenshots/cupertino-edge-light.webp" alt="Cupertino edge sidebar expanding from its default collapsed state"></details> |
 
+## Standalone UI packages
+
+Requires Flutter 3.47 or later and Dart 3.13 or later. Following Flutter's official
+migration guidance, this package uses `material_ui` and `cupertino_ui`; host apps
+must use the corresponding standalone UI libraries. See the
+[official migration guide](https://docs.flutter.dev/release/breaking-changes/material-ui-and-cupertino-ui).
+
 ## Getting started
 
 Add the package:

@@ -74,8 +74,10 @@ class SideNavigationExtent {
 }
 
 /// Builds the optional visual displayed inside a side-navigation resize target.
-typedef SideNavigationDragHandleBuilder =
-    Widget Function(BuildContext context, Set<WidgetState> states);
+typedef SideNavigationDragHandleBuilder = Widget Function(
+  BuildContext context,
+  Set<WidgetState> states,
+);
 
 /// Direction-aware horizontal resize target for side navigation.
 class SideNavigationResizeHandle extends StatefulWidget {

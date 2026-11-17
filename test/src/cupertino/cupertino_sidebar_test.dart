@@ -1,8 +1,8 @@
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
 import 'package:flutter_adaptive_sidebar/src/cupertino/cupertino_sidebar_chrome.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../harness/sidebar_harness.dart';
 
@@ -175,9 +175,8 @@ void main() {
       MaterialApp(
         home: Builder(
           builder: (context) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(padding: const EdgeInsets.only(top: 20)),
+            data: MediaQuery.of(context)
+                .copyWith(padding: const EdgeInsets.only(top: 20)),
             child: NavigationObstructionScope(
               obstruction: const NavigationObstruction(
                 sidebar: EdgeInsets.only(left: 50, top: 43),
@@ -375,9 +374,8 @@ void main() {
           primaryColor: CupertinoColors.systemPurple,
         ),
         toggleButtonBuilder: (context, defaultBuilder) => CupertinoTheme(
-          data: CupertinoTheme.of(
-            context,
-          ).copyWith(primaryColor: CupertinoColors.systemGreen),
+          data: CupertinoTheme.of(context)
+              .copyWith(primaryColor: CupertinoColors.systemGreen),
           child: Builder(builder: defaultBuilder),
         ),
       ),
@@ -790,9 +788,8 @@ void main() {
     final capsuleColor = tester.widget<ColoredBox>(
       find.descendant(of: capsule, matching: find.byType(ColoredBox)).first,
     );
-    final barColor = CupertinoTheme.of(
-      tester.element(capsule),
-    ).barBackgroundColor;
+    final barColor = CupertinoTheme.of(tester.element(capsule))
+        .barBackgroundColor;
     expect(
       capsuleColor.color,
       barColor.withValues(alpha: kCupertinoSidebarCollapsedBarGlassAlpha),
@@ -952,9 +949,8 @@ void main() {
     );
     expect(
       (highlight().decoration as BoxDecoration).color,
-      CupertinoTheme.of(
-        tester.element(find.text('Home')),
-      ).primaryColor.withValues(alpha: 0.14),
+      CupertinoTheme.of(tester.element(find.text('Home'))).primaryColor
+          .withValues(alpha: 0.14),
     );
 
     await tester.pumpWidget(
@@ -967,9 +963,8 @@ void main() {
 
     expect(
       (highlight().decoration as BoxDecoration).color,
-      CupertinoTheme.of(
-        tester.element(find.text('Home')),
-      ).primaryColor.withValues(alpha: 0.14),
+      CupertinoTheme.of(tester.element(find.text('Home'))).primaryColor
+          .withValues(alpha: 0.14),
     );
   });
 

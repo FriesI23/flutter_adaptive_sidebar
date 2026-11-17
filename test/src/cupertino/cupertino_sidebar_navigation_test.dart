@@ -1,7 +1,7 @@
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../harness/sidebar_harness.dart';
 
@@ -89,9 +89,8 @@ void main() {
     await tester.tap(action);
     await tester.pumpAndSettle();
     expect(pressedSelection, const SidebarAuxiliarySelection(0));
-    final primaryColor = CupertinoTheme.of(
-      tester.element(settings),
-    ).primaryColor;
+    final primaryColor = CupertinoTheme.of(tester.element(settings))
+        .primaryColor;
     expect(_fill(tester, action), primaryColor.withValues(alpha: 1));
     expect(_fill(tester, settings), primaryColor.withValues(alpha: 0.14));
 
@@ -152,9 +151,8 @@ void main() {
       tester.widget<CupertinoSidebarDestination>(destination).active,
       isTrue,
     );
-    final primaryColor = CupertinoTheme.of(
-      tester.element(destination),
-    ).primaryColor;
+    final primaryColor = CupertinoTheme.of(tester.element(destination))
+        .primaryColor;
     expect(_fill(tester, destination), primaryColor.withValues(alpha: 1));
 
     rebuild(() => revision += 1);

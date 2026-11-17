@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../adaptive_navigation_controller.dart';
 import '../navigation_obstruction.dart';
@@ -12,6 +12,10 @@ import 'material_sidebar_metrics.dart';
 /// Expansion and width come from [controller]. [content] fills the rail
 /// below the expand control. Use `MaterialSidebarNavigation` for the default
 /// destination list.
+///
+/// Host in [MaterialApp] from `package:material_ui/material_ui.dart`. The
+/// SDK's `package:flutter/material.dart` host does not supply this library's
+/// themes and localizations.
 ///
 /// ```text
 /// collapsed              expanded
@@ -102,6 +106,28 @@ class _MaterialSidebarState extends State<MaterialSidebar> {
   @override
   Widget build(BuildContext context) {
     assert(widget.extent.minimum > widget.collapsedExtent);
+    assert(() {
+      if (Localizations.of<MaterialLocalizations>(
+            context,
+            MaterialLocalizations,
+          ) !=
+          null) {
+        return true;
+      }
+      throw FlutterError.fromParts([
+        ErrorSummary('MaterialSidebar requires material_ui localizations.'),
+        ErrorDescription(
+          'MaterialApp from package:flutter/material.dart does not provide '
+          'the localizations used by this sidebar.',
+        ),
+        ErrorHint(
+          'Replace the host import with '
+          'package:material_ui/material_ui.dart and use its MaterialApp. '
+          'For a custom host, install '
+          'GlobalMaterialLocalizations.delegates from material_ui.',
+        ),
+      ]);
+    }());
     final windowWidth = MediaQuery.sizeOf(context).width;
     final resolvedExpandedWidth = _controller.effectiveWidth(
       widget.extent,

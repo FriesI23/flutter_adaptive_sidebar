@@ -7,5 +7,8 @@ const Duration kSidebarAnimationDuration = Duration(milliseconds: 250);
 ///
 /// Material and Cupertino sidebars both accept this builder. Cupertino does
 /// not create a Material tooltip on its own.
-typedef NavigationTooltipBuilder =
-    Widget Function(BuildContext context, String message, Widget child);
+typedef NavigationTooltipBuilder = Widget Function(
+  BuildContext context,
+  String message,
+  Widget child,
+);
