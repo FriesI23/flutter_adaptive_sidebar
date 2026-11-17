@@ -4,6 +4,7 @@
 
 - **Breaking:** Require Flutter 3.47+ and Dart 3.13+; support only the standalone
   `material_ui` and `cupertino_ui` design libraries.
+- Update direct `cupertino_icons` dependencies to `^2.0.0`.
 - Update app hosts, custom content, and builder imports to the standalone libraries.
 - Migrate themes, `CupertinoSidebarThemeData` registration, and dynamic colors.
 - Use the localization delegates from the standalone libraries.
