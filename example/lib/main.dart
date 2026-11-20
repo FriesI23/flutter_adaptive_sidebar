@@ -1,11 +1,11 @@
 import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'ios_navigation_obstruction.dart';
 

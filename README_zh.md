@@ -28,6 +28,12 @@
 | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Material 侧边栏展开与折叠动画](screenshots/material-sidebar.webp) | **标准样式**<br>![Cupertino 侧边栏展开与折叠动画](screenshots/cupertino-sidebar.webp)<br><br><details><summary><strong>Edge 样式 · 亮色</strong></summary><br><img src="screenshots/cupertino-edge-light.webp" alt="Cupertino Edge 侧边栏从默认折叠态展开的动画"></details> |
 
+## 独立 UI 包
+
+需要 Flutter 3.47 及以上、Dart 3.13 及以上。本包按照 Flutter 官方迁移建议使用
+`material_ui` 和 `cupertino_ui`，宿主应用需使用对应的独立 UI 库。迁移方式请参阅
+[官方迁移指南](https://docs.flutter.dev/release/breaking-changes/material-ui-and-cupertino-ui)。
+
 ## 开始使用
 
 添加依赖：

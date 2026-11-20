@@ -1,13 +1,13 @@
 import 'dart:ui' as ui;
 
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
 import 'package:flutter_adaptive_sidebar/src/cupertino/cupertino_floating_surface.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../harness/sidebar_harness.dart';
 
@@ -80,9 +80,8 @@ void main() {
 
       expect(controller.selection, const SidebarPrimarySelection(0));
       expect(_focusNode(tester, destination).hasFocus, isTrue);
-      final primaryColor = CupertinoTheme.of(
-        tester.element(destination),
-      ).primaryColor;
+      final primaryColor = CupertinoTheme.of(tester.element(destination))
+          .primaryColor;
       expect(
         _destinationFill(tester, destination),
         primaryColor.withValues(alpha: 1),

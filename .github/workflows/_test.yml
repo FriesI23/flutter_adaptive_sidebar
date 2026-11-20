@@ -5,13 +5,14 @@ on:
 
 jobs:
   flutter-test:
-    name: Flutter package and example
+    name: Flutter 3.47 package and example
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.44.9
+          channel: stable
+          flutter-version: 3.47.x
           cache: true
       - name: Create test results directory
         run: mkdir -p test-results

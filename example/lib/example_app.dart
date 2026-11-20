@@ -334,9 +334,8 @@ class _ExampleBody extends StatelessWidget {
           navigationBar: CupertinoNavigationBar(
             // Keep the fill clear so the example gradient remains visible
             // through the navigation bar's backdrop blur.
-            backgroundColor: CupertinoTheme.of(
-              context,
-            ).scaffoldBackgroundColor.withValues(alpha: 0),
+            backgroundColor: CupertinoTheme.of(context).scaffoldBackgroundColor
+                .withValues(alpha: 0),
             automaticBackgroundVisibility: true,
             enableBackgroundFilterBlur: true,
             border: null,
@@ -765,9 +764,8 @@ class _PlacementDemoPage extends StatelessWidget {
     };
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        backgroundColor: CupertinoTheme.of(
-          context,
-        ).scaffoldBackgroundColor.withValues(alpha: 0),
+        backgroundColor: CupertinoTheme.of(context).scaffoldBackgroundColor
+            .withValues(alpha: 0),
         automaticBackgroundVisibility: true,
         enableBackgroundFilterBlur: true,
         border: null,
@@ -1406,9 +1404,8 @@ class _CupertinoCapsuleButtonState extends State<_CupertinoCapsuleButton> {
     final textStyle = CupertinoTheme.of(context).textTheme.actionTextStyle
         .merge(widget.labelStyle)
         .copyWith(color: foreground);
-    final focusColor = CupertinoTheme.of(
-      context,
-    ).primaryColor.withValues(alpha: 0.8);
+    final focusColor = CupertinoTheme.of(context).primaryColor
+        .withValues(alpha: 0.8);
     return Semantics(
       button: true,
       child: FocusableActionDetector(

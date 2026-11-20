@@ -1,4 +1,8 @@
 /// Material and Cupertino sidebars with a shared controller.
+///
+/// Uses the standalone `material_ui` and `cupertino_ui` libraries for design
+/// widgets, themes, and localizations. Import those libraries directly when
+/// building the app that hosts these sidebars.
 library;
 
 export 'src/adaptive_navigation_controller.dart';

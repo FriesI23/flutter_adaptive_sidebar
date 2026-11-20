@@ -1,20 +1,20 @@
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 
 import '../sidebar_constants.dart';
 
 /// Builds the package-default Cupertino sidebar toggle in [context].
-typedef CupertinoSidebarToggleDefaultBuilder =
-    Widget Function(BuildContext context);
+typedef CupertinoSidebarToggleDefaultBuilder = Widget Function(
+  BuildContext context,
+);
 
 /// Optionally wraps or replaces the Cupertino sidebar toggle presentation.
 ///
 /// Call [defaultBuilder] from a descendant [BuildContext] to retain the
 /// package-owned button, semantics, focus, tooltip, and interaction behavior.
-typedef CupertinoSidebarToggleBuilder =
-    Widget Function(
-      BuildContext context,
-      CupertinoSidebarToggleDefaultBuilder defaultBuilder,
-    );
+typedef CupertinoSidebarToggleBuilder = Widget Function(
+  BuildContext context,
+  CupertinoSidebarToggleDefaultBuilder defaultBuilder,
+);
 
 /// Button that shows or hides the Cupertino sidebar.
 class CupertinoSidebarButton extends StatelessWidget {

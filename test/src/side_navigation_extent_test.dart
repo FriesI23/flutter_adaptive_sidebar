@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
 import 'package:flutter_adaptive_sidebar/src/side_navigation_extent.dart'
     show SideNavigationResizeHandle;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   const extent = SideNavigationExtent(

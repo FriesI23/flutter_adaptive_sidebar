@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 
 import '../adaptive_navigation_destination.dart';
 import '../sidebar_destination_selection.dart';

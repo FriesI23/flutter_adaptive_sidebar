@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_adaptive_sidebar/flutter_adaptive_sidebar.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -125,9 +125,8 @@ void main() {
     );
 
     final context = tester.element(find.byType(CupertinoSidebarDestination));
-    final primaryColor = CupertinoTheme.of(
-      context,
-    ).primaryColor.withValues(alpha: 1);
+    final primaryColor = CupertinoTheme.of(context).primaryColor
+        .withValues(alpha: 1);
     expect(_fill(tester), primaryColor.withValues(alpha: 0.14));
     expect(_labelColor(tester), CupertinoColors.white);
     expect(_iconColor(tester), primaryColor);

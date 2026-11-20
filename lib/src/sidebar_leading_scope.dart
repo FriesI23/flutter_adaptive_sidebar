@@ -1,4 +1,5 @@
-import 'package:flutter/cupertino.dart' show kMinInteractiveDimensionCupertino;
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show kMinInteractiveDimensionCupertino;
 import 'package:flutter/widgets.dart';
 
 import 'cupertino/cupertino_sidebar_toolbar_region.dart';

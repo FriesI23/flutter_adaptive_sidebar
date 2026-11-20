@@ -1,19 +1,20 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Paints a Cupertino sidebar focus halo over [decoration].
 ///
 /// The package retains focus, keyboard, and platform semantics. The builder
 /// only replaces the visual treatment. Its function signature intentionally
 /// matches the adaptive-actions focus hook so an app can reuse one painter.
-typedef CupertinoSidebarFocusHaloBuilder =
-    Widget Function(
-      BuildContext context, {
-      required Widget child,
-      required bool visible,
-      required ShapeDecoration decoration,
-    });
+typedef CupertinoSidebarFocusHaloBuilder = Widget Function(
+  BuildContext context, {
+  required Widget child,
+  required bool visible,
+  required ShapeDecoration decoration,
+});
 
 /// App-theme overrides for Cupertino sidebar surfaces.
+///
+/// Register in `package:material_ui`'s [ThemeData.extensions].
 @immutable
 class CupertinoSidebarThemeData
     extends ThemeExtension<CupertinoSidebarThemeData> {
