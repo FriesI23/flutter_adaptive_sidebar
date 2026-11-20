@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1
+
+- Add README recommendations for other projects.
+
 ## 0.5.0
 
 - **Breaking:** Require Flutter 3.47+ and Dart 3.13+; support only the standalone

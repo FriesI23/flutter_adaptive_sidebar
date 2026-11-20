@@ -172,6 +172,24 @@ make check
 [![ETH][eth-badge]][eth-addr]
 [![BTC][btc-badge]][btc-addr]
 
+<!-- friesi23-projects:start -->
+
+## More projects
+
+| Project | Description |
+| --- | --- |
+| ![Flutter Package](https://img.shields.io/badge/-02569B?style=flat-square&logo=flutter&logoColor=white) [Adaptive Actions](https://github.com/FriesI23/adaptive_actions) | Adaptive Flutter action bars and overflow menus for Material and Cupertino. |
+| ![Flutter Plugin](https://img.shields.io/badge/-02569B?style=flat-square&logo=flutter&logoColor=white) [iOS Window Control Layout](https://github.com/FriesI23/ios_window_control_layout) | Keep Flutter layouts clear of iPadOS window controls. |
+| ![Flutter Package](https://img.shields.io/badge/-02569B?style=flat-square&logo=flutter&logoColor=white) [Named HTML Color](https://github.com/FriesI23/named_html_color) | HTML named colors for Flutter. |
+| ![Flutter Package](https://img.shields.io/badge/-02569B?style=flat-square&logo=flutter&logoColor=white) [Simple Heatmap Calendar](https://github.com/FriesI23/simple_heatmap_calendar) | Customizable Flutter heatmap calendar with internationalization support. |
+| ![Flutter Plugin](https://img.shields.io/badge/-02569B?style=flat-square&logo=flutter&logoColor=white) [Native Natural Sort](https://github.com/FriesI23/native_natural_sort) | Locale-aware natural sorting for Flutter using native platform engines. |
+| ![Dart Package](https://img.shields.io/badge/-0175C2?style=flat-square&logo=dart&logoColor=white) [Simple WebDAV Client](https://github.com/FriesI23/simple_webdav_client) | Dart WebDAV client for file operations, properties, and resource locks. |
+| ![Dart Package](https://img.shields.io/badge/-0175C2?style=flat-square&logo=dart&logoColor=white) [Dart Transmission RPC](https://github.com/FriesI23/dart_transmission_rpc) | Dart client for the Transmission RPC API. |
+| ![Dart Package](https://img.shields.io/badge/-0175C2?style=flat-square&logo=dart&logoColor=white) [Win2IANA TimeZone Converter](https://github.com/FriesI23/win2iana_tz_converter) | Dart utilities for converting Windows and IANA time zone identifiers. |
+| ![App](https://img.shields.io/badge/-02569B?style=flat-square&logo=flutter&logoColor=white) [Table Habit](https://github.com/FriesI23/mhabit) | Cross-platform habit tracker with scoring, charts, and WebDAV sync. |
+
+<!-- friesi23-projects:end -->
+
 ## License
 
 This project is licensed under the MIT License.

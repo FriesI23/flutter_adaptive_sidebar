@@ -162,6 +162,24 @@ make check
 [![ETH][eth-badge]][eth-addr]
 [![BTC][btc-badge]][btc-addr]
 
+<!-- friesi23-projects:start -->
+
+## 更多项目
+
+| 项目 | 简短介绍 |
+| --- | --- |
+| ![Flutter Package](https://img.shields.io/badge/-02569B?style=flat-square&logo=flutter&logoColor=white) [Adaptive Actions](https://github.com/FriesI23/adaptive_actions) | 支持 Material 与 Cupertino 的 Flutter 自适应操作栏与溢出菜单。 |
+| ![Flutter Plugin](https://img.shields.io/badge/-02569B?style=flat-square&logo=flutter&logoColor=white) [iOS Window Control Layout](https://github.com/FriesI23/ios_window_control_layout) | 让 Flutter 布局避开 iPadOS 窗口控制按钮。 |
+| ![Flutter Package](https://img.shields.io/badge/-02569B?style=flat-square&logo=flutter&logoColor=white) [Named HTML Color](https://github.com/FriesI23/named_html_color) | 在 Flutter 中使用 HTML 命名颜色。 |
+| ![Flutter Package](https://img.shields.io/badge/-02569B?style=flat-square&logo=flutter&logoColor=white) [Simple Heatmap Calendar](https://github.com/FriesI23/simple_heatmap_calendar) | 支持国际化与灵活定制的 Flutter 热力日历组件。 |
+| ![Flutter Plugin](https://img.shields.io/badge/-02569B?style=flat-square&logo=flutter&logoColor=white) [Native Natural Sort](https://github.com/FriesI23/native_natural_sort) | 使用平台原生排序引擎，提供支持地区规则与数字的 Flutter 自然排序。 |
+| ![Dart Package](https://img.shields.io/badge/-0175C2?style=flat-square&logo=dart&logoColor=white) [Simple WebDAV Client](https://github.com/FriesI23/simple_webdav_client) | 支持文件操作、属性管理与资源锁的 Dart WebDAV 客户端。 |
+| ![Dart Package](https://img.shields.io/badge/-0175C2?style=flat-square&logo=dart&logoColor=white) [Dart Transmission RPC](https://github.com/FriesI23/dart_transmission_rpc) | 用于调用 Transmission RPC 接口的 Dart 客户端。 |
+| ![Dart Package](https://img.shields.io/badge/-0175C2?style=flat-square&logo=dart&logoColor=white) [Win2IANA TimeZone Converter](https://github.com/FriesI23/win2iana_tz_converter) | 用于 Windows 与 IANA 时区标识转换的 Dart 工具包。 |
+| ![App](https://img.shields.io/badge/-02569B?style=flat-square&logo=flutter&logoColor=white) [Table Habit](https://github.com/FriesI23/mhabit) | 支持评分、图表与 WebDAV 同步的跨平台习惯追踪应用。 |
+
+<!-- friesi23-projects:end -->
+
 ## 许可证
 
 本项目基于 MIT License 许可。
